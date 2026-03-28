@@ -100,7 +100,7 @@ const LandingPage = () => {
                 <div className="max-w-7xl mx-auto px-6 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-                             <img src="/dgg_logo.png" alt="DGG Logo" className="w-12 h-12 rounded-xl object-contain shadow-[0_0_15px_rgba(213,161,21,0.3)]" />
+                             <img src="/dgg_logo.jpg" alt="DGG Logo" className="w-12 h-12 rounded-xl object-contain shadow-[0_0_15px_rgba(213,161,21,0.3)]" />
                             <div>
                                 <h2 className="text-xl font-black text-white leading-none">DGG</h2>
                                 <span className="text-[8px] text-gold-500 uppercase tracking-widest font-bold">Gestión y Asesorías - ARMAS DE FUEGO DE DEFENSA PERSONAL</span>
@@ -481,7 +481,7 @@ const LandingPage = () => {
                 <div className="max-w-7xl mx-auto">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                         <div className="flex items-center gap-3">
-                            <img src="/dgg_logo.png" alt="DGG Logo" className="w-10 h-10 rounded-lg object-contain" />
+                            <img src="/dgg_logo.jpg" alt="DGG Logo" className="w-10 h-10 rounded-lg object-contain" />
                             <div>
                                 <h3 className="text-lg font-black text-white">DGG - GestorArmas Pro</h3>
                                 <p className="text-[10px] text-military-500 uppercase tracking-widest font-bold">Gestión y Asesorías - ARMAS DE FUEGO DE DEFENSA PERSONAL</p>

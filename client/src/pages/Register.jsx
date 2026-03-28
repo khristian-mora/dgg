@@ -66,7 +66,7 @@ const Register = () => {
 
             {/* Header / Logo */}
             <Link to="/" className="mb-12 flex items-center gap-4 group animate-in slide-in-from-top-4 duration-700">
-                <img src="/dgg_logo.png" alt="DGG Logo" className="w-16 h-16 rounded-2xl object-contain shadow-[0_0_20px_rgba(213,161,21,0.3)] group-hover:scale-110 transition-transform" />
+                <img src="/dgg_logo.jpg" alt="DGG Logo" className="w-16 h-16 rounded-2xl object-contain shadow-[0_0_20px_rgba(213,161,21,0.3)] group-hover:scale-110 transition-transform" />
                 <div>
                     <h1 className="text-2xl font-black text-white tracking-tight leading-none uppercase">DGG</h1>
                     <span className="block text-[8px] text-gold-500 font-bold uppercase tracking-widest leading-none mt-1">Gestión y Asesorías - ARMAS DE FUEGO DE DEFENSA PERSONAL</span>
@@ -276,7 +276,7 @@ const Register = () => {
                         <Lock size={12} className="text-gold-500"/> SSL 256-Bit
                      </div>
                      <div className="flex items-center gap-2 text-[9px] font-bold text-military-400 uppercase tracking-widest">
-                        <img src="/dgg_logo.png" alt="Mini Logo" className="w-4 h-4 object-contain opacity-50" />
+                        <img src="/dgg_logo.jpg" alt="Mini Logo" className="w-4 h-4 object-contain opacity-50" />
                         <span className="text-gold-500">Ley 1581</span>
                      </div>
                 </div>

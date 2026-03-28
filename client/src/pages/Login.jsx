@@ -65,7 +65,7 @@ const Login = () => {
 
                 {/* Logo Section */}
                 <div className="flex flex-col items-center mb-10 text-center">
-                    <img src="/dgg_logo.png" alt="DGG Logo" className="w-24 h-24 mb-6 object-contain drop-shadow-[0_0_20px_rgba(213,161,21,0.4)]" />
+                    <img src="/dgg_logo.jpg" alt="DGG Logo" className="w-24 h-24 mb-6 object-contain drop-shadow-[0_0_20px_rgba(213,161,21,0.4)]" />
                     <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gold-100 via-gold-400 to-gold-600 tracking-tight">
                         DGG - GestorArmas Pro
                     </h1>

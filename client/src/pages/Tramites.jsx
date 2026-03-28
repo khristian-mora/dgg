@@ -181,7 +181,7 @@ const Tramites = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {Object.entries(requisitosOficiales).map(([tipo, items]) => (
                      <div key={tipo} className="glass p-6 rounded-[2.5rem] border border-military-100/10 hover:border-gold-500/20 transition-all group relative overflow-hidden">
-                          <img src="/dgg_logo.png" alt="DGG Mini" className="absolute -right-2 -top-2 w-16 h-16 opacity-5 group-hover:rotate-12 transition-transform" />
+                          <img src="/dgg_logo.jpg" alt="DGG Mini" className="absolute -right-2 -top-2 w-16 h-16 opacity-5 group-hover:rotate-12 transition-transform" />
                           <div className="flex items-center gap-3 mb-4">
                              <div className="p-2 bg-gold-500/10 rounded-lg">
                                  <Plus size={14} className="text-gold-500" />
