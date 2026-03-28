@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  background-color: #0f110c;
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+}
+
+#root {
+  width: 100%;
+}
+
+.glass {
+  background: rgba(24, 27, 20, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(168, 180, 143, 0.1);
+}
+
+.gold-gradient,
+.bg-gold-gradient {
+  background: linear-gradient(135deg, #d5a115 0%, #f6e98d 50%, #b87b0f 100%);
+}
+
+.military-gradient {
+  background: linear-gradient(135deg, #2f3428 0%, #68774c 100%);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #181b14;
+}
+::-webkit-scrollbar-thumb {
+  background: #414b32;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #d5a115;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
