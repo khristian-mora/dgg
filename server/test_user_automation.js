@@ -8,16 +8,15 @@ async function testUserAutomation() {
     const testCedula = `123456_${Date.now()}`;
 
     try {
-        // 1. Crear el Cliente
+        // 1. Crear el Cliente usando el Servicio (que incluye automatización)
         console.log(`- Creando cliente de prueba con cédula: ${testCedula}`);
-        const cliente = await prisma.cliente.create({
-            data: {
-                nombres: 'Test',
-                apellidos: 'Automation',
-                cedula: testCedula,
-                correoElectronico: testEmail,
-                telefono: '3000000001'
-            }
+        const { createCliente } = require('./src/services/clienteService');
+        const cliente = await createCliente({
+            nombres: 'Test',
+            apellidos: 'Automation',
+            cedula: testCedula,
+            correoElectronico: testEmail,
+            telefono: '3000000001'
         });
 
         // 2. Esperar un momento y buscar el usuario (la creación es rápida pero mejor asegurar)
