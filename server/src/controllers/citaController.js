@@ -110,4 +110,99 @@ const deleteCita = async (req, res) => {
   }
 };
 
-module.exports = { getCitas, createCita, updateCitaStatus, deleteCita };
+// Consolidated: returns ALL events for a given date (citas + tramites created + pagos + pasos)
+const getEventosDia = async (req, res) => {
+  const { fecha } = req.query;
+  
+  try {
+    const targetDate = fecha ? new Date(fecha) : new Date();
+    // Set time to start of day
+    targetDate.setHours(0, 0, 0, 0);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(targetDate.getDate() + 1);
+
+    const [citas, tramitesCreados, pagos, pasos] = await Promise.all([
+      // Citas del día
+      prisma.cita.findMany({
+        where: { fecha: { gte: targetDate, lt: nextDay } },
+        include: { cliente: { select: { nombres: true, apellidos: true } }, tramite: { select: { tipo: true } } },
+        orderBy: { fecha: 'asc' }
+      }),
+      // Trámites creados el día
+      prisma.tramite.findMany({
+        where: { createdAt: { gte: targetDate, lt: nextDay } },
+        include: { cliente: { select: { nombres: true, apellidos: true } } },
+        orderBy: { createdAt: 'asc' }
+      }),
+      // Pagos/abonos registrados el día
+      prisma.pago.findMany({
+        where: { fecha: { gte: targetDate, lt: nextDay } },
+        include: {
+          tramite: { select: { tipo: true } },
+          cliente: { select: { nombres: true, apellidos: true } }
+        },
+        orderBy: { fecha: 'asc' }
+      }),
+      // Pasos avanzados del día
+      prisma.pasoTramite.findMany({
+        where: { fechaAccion: { gte: targetDate, lt: nextDay } },
+        include: {
+          tramite: {
+            select: { tipo: true, cliente: { select: { nombres: true, apellidos: true } } }
+          }
+        },
+        orderBy: { fechaAccion: 'asc' }
+      })
+    ]);
+
+    // Normalize events into a unified format
+    const eventos = [
+      ...citas.map(c => ({
+        tipo: 'CITA',
+        id: c.id,
+        hora: c.hora || new Date(c.fecha).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+        titulo: c.motivo,
+        subtitulo: c.cliente ? `${c.cliente.nombres} ${c.cliente.apellidos}` : 'Cliente',
+        color: 'blue',
+        meta: c
+      })),
+      ...tramitesCreados.map(t => ({
+        tipo: 'TRAMITE_CREADO',
+        id: t.id,
+        hora: new Date(t.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+        titulo: `Nuevo Trámite: ${t.tipo}`,
+        subtitulo: t.cliente ? `${t.cliente.nombres} ${t.cliente.apellidos}` : 'Cliente',
+        color: 'gold',
+        meta: t
+      })),
+      ...pagos.map(p => ({
+        tipo: 'ABONO',
+        id: p.id,
+        hora: new Date(p.fecha).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+        titulo: `Abono: $${Number(p.valor).toLocaleString()}`,
+        subtitulo: p.cliente ? `${p.cliente.nombres} ${p.cliente.apellidos}` : (p.tramite?.tipo || 'Trámite'),
+        color: 'green',
+        meta: p
+      })),
+      ...pasos.map(p => ({
+        tipo: 'PASO_TRAMITE',
+        id: p.id,
+        hora: new Date(p.fechaAccion).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+        titulo: p.descripcion,
+        subtitulo: p.tramite?.cliente ? `${p.tramite.cliente.nombres} ${p.tramite.cliente.apellidos}` : p.tramite?.tipo || '',
+        color: 'purple',
+        meta: p
+      }))
+    ];
+
+    // Sort by time
+    eventos.sort((a, b) => a.hora.localeCompare(b.hora));
+
+    res.json(eventos);
+  } catch (err) {
+    console.error('Error getEventosDia:', err.message);
+    res.status(500).json({ message: 'Error al obtener eventos del día', error: err.message });
+  }
+};
+
+module.exports = { getCitas, createCita, updateCitaStatus, deleteCita, getEventosDia };

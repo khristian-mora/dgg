@@ -58,6 +58,11 @@ const Register = () => {
         }
     };
 
+    const credenciales = {
+        usuario: formData.correoElectronico,
+        contrasena: formData.cedula
+    };
+
     return (
         <div className="min-h-screen bg-military-950 font-outfit text-military-100 flex flex-col items-center justify-center p-6 relative overflow-hidden selection:bg-gold-500/30">
             {/* Background Effects */}
@@ -242,10 +247,26 @@ const Register = () => {
                             <CheckCircle2 className="text-gold-500" size={48} />
                         </div>
                         <h2 className="text-4xl font-black text-white mb-4 italic tracking-tight">¡Misión Cumplida!</h2>
-                        <p className="text-military-400 text-lg mb-10 max-w-sm mx-auto leading-relaxed">
-                            Hemos recibido su solicitud. Un agente especializado revisará su perfil y se contactará con usted en menos de 12 horas.
+                        <p className="text-military-400 text-lg mb-6 max-w-sm mx-auto leading-relaxed">
+                            ¡Registro exitoso! Aquí están tus credenciales de acceso:
                         </p>
                         
+                        <div className="p-6 bg-military-900 border border-gold-500/30 rounded-[2rem] mb-6 text-left">
+                            <div className="space-y-4">
+                                <div>
+                                    <span className="text-[10px] font-black text-military-500 uppercase tracking-widest">Usuario (Email)</span>
+                                    <p className="text-lg font-bold text-gold-400">{credenciales.usuario}</p>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-military-500 uppercase tracking-widest">Contraseña</span>
+                                    <p className="text-lg font-bold text-gold-400">{credenciales.contrasena}</p>
+                                </div>
+                            </div>
+                            <p className="text-[10px] text-military-500 mt-4 italic">
+                                Guarda estas credenciales. También te enviaremos un correo de confirmación.
+                            </p>
+                        </div>
+
                         <div className="p-6 bg-military-900 border border-military-800 rounded-[2.5rem] mb-10">
                             <div className="flex items-center gap-4 text-left">
                                 <div className="p-3 bg-military-800 rounded-2xl">
@@ -259,8 +280,15 @@ const Register = () => {
                         </div>
 
                         <button 
+                            onClick={() => navigate('/login')}
+                            className="w-full py-5 gold-gradient text-military-950 font-black rounded-2xl hover:brightness-110 transition-all uppercase tracking-widest mb-4"
+                        >
+                            Ir a Iniciar Sesión
+                        </button>
+                        
+                        <button 
                             onClick={() => navigate('/')}
-                            className="w-full py-5 bg-military-800 border border-military-700 text-white font-black rounded-2xl hover:bg-military-700 transition-all uppercase tracking-widest"
+                            className="w-full py-3 bg-military-800 border border-military-700 text-white font-bold rounded-2xl hover:bg-military-700 transition-all uppercase text-sm"
                         >
                             Volver al Inicio
                         </button>

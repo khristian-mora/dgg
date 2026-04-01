@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const { encrypt, decrypt } = require('../utils/encryption');
+const { PROCEDURE_ROADMAPS } = require('../config/procedureRoadmaps');
 
 // Listar clientes con filtros básicos
 const getClientes = async (req, res) => {
@@ -30,11 +31,16 @@ const getClientes = async (req, res) => {
       orderBy: { updatedAt: 'desc' }
     });
     
-    // No devolvemos credenciales sensibles en listas
+    // No devolvemos credenciales sensibles en listas + Calculamos progreso
     const maskedClientes = clientes.map(c => ({
         ...c,
         contrasenaDCCAE: c.contrasenaDCCAE ? '********' : null,
-        correoDCCAE: c.correoDCCAE ? '********' : null
+        correoDCCAE: c.correoDCCAE ? '********' : null,
+        tramites: c.tramites.map(t => {
+            const roadmap = PROCEDURE_ROADMAPS[t.tipo] || PROCEDURE_ROADMAPS['DEFAULT'];
+            const progreso = Math.min(Math.round((t.pasos?.length || 0) / (roadmap?.length || 3) * 100), 100);
+            return { ...t, progreso };
+        })
     }));
 
     res.json(maskedClientes);
@@ -69,9 +75,13 @@ const getClienteById = async (req, res) => {
         armas: true,
         documentos: true,
         tramites: {
-          include: { pasos: true, pagos: true }
+          include: {
+            pasos: { orderBy: { fechaAccion: 'asc' } },
+            pagos: { orderBy: { fecha: 'desc' }, take: 5 }
+          },
+          orderBy: { createdAt: 'desc' }
         },
-        citas: true
+        citas: { orderBy: { fecha: 'desc' }, take: 5 }
       }
     });
     
@@ -80,6 +90,15 @@ const getClienteById = async (req, res) => {
     // Desciframos campos para visualización de personal autorizado
     if (cliente.contrasenaDCCAE) cliente.contrasenaDCCAE = decrypt(cliente.contrasenaDCCAE);
     if (cliente.correoDCCAE) cliente.correoDCCAE = decrypt(cliente.correoDCCAE);
+
+    // Calcular progreso para cada tramite
+    if (cliente.tramites) {
+        cliente.tramites = cliente.tramites.map(t => {
+            const roadmap = PROCEDURE_ROADMAPS[t.tipo] || PROCEDURE_ROADMAPS['DEFAULT'];
+            const progreso = Math.min(Math.round((t.pasos?.length || 0) / (roadmap?.length || 3) * 100), 100);
+            return { ...t, progreso };
+        });
+    }
 
     res.json(cliente);
   } catch (err) {

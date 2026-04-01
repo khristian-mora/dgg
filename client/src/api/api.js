@@ -41,17 +41,49 @@ const fetchWithAuth = async (url, options = {}) => {
 export const api = {
     auth: {
         login: async (email, password) => {
-            // Implementation if using real API
             const res = await fetch(`${API_URL}/auth/login`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email, password })
             });
-            if (!res.ok) throw new Error('Credenciales inválidas');
+            
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Credenciales inválidas');
+            }
+            
             return res.json();
         },
         me: () => fetchWithAuth('/auth/me'),
         changePassword: (data) => fetchWithAuth('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
+        forgotPassword: async (email) => {
+            const res = await fetch(`${API_URL}/auth/forgot-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw { response: { data: { message: errorData.message || 'Error al enviar el correo' } } };
+            }
+            
+            return res.json();
+        },
+        resetPassword: async (token, newPassword) => {
+            const res = await fetch(`${API_URL}/auth/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, newPassword })
+            });
+            
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw { response: { data: { message: errorData.message || 'Error al restablecer la contraseña' } } };
+            }
+            
+            return res.json();
+        },
     },
     users: {
         getAll: () => fetchWithAuth('/users'),
@@ -104,16 +136,45 @@ export const api = {
         hardDelete: (id) => fetchWithAuth(`/clientes/${id}/permanent`, { method: 'DELETE' }),
     },
     tramites: {
-        getAll: (params) => {
-            const query = new URLSearchParams(params).toString();
-            return fetchWithAuth(`/tramites?${query}`);
-        },
+        getAll: (params) => fetchWithAuth(`/tramites?${new URLSearchParams(params)}`),
+        getHistory: () => fetchWithAuth('/tramites/history/all'),
         getById: (id) => fetchWithAuth(`/tramites/${id}`),
-        create: (data) => fetchWithAuth('/tramites', { method: 'POST', body: JSON.stringify(data) }),
-        addPaso: (id, data) => fetchWithAuth(`/tramites/${id}/pasos`, { method: 'POST', body: JSON.stringify(data) }),
-        updateEstado: (id, estado) => fetchWithAuth(`/tramites/${id}/estado`, { method: 'PUT', body: JSON.stringify({ estado }) }),
+        create: (data) => fetchWithAuth('/tramites', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+        update: (id, data) => fetchWithAuth(`/tramites/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        }),
+        addPaso: (id, data) => fetchWithAuth(`/tramites/${id}/pasos`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+        avanzarPaso: (id, data) => fetchWithAuth(`/tramites/${id}/avanzar-paso`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+        updateEstado: (id, data) => fetchWithAuth(`/tramites/${id}/estado`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        })
+    },
+    pagos: {
+        getByTramite: (tramiteId) => fetchWithAuth(`/pagos/tramite/${tramiteId}`),
+        create: (data) => fetchWithAuth('/pagos', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        }),
+        delete: (id) => fetchWithAuth(`/pagos/${id}`, {
+            method: 'DELETE'
+        })
     },
     documentos: {
+        getAll: (params) => {
+            const q = params ? `?${new URLSearchParams(params)}` : '';
+            return fetchWithAuth(`/documentos${q}`);
+        },
         upload: (formData) => {
             const user = JSON.parse(localStorage.getItem('user'));
             return fetch(`${API_URL}/documentos/upload`, {
@@ -137,6 +198,7 @@ export const api = {
             });
         },
         getByCliente: (clienteId) => fetchWithAuth(`/documentos/cliente/${clienteId}`),
+        getByTramite: (tramiteId) => fetchWithAuth(`/documentos/tramite/${tramiteId}`),
 
         update: (id, data) => fetchWithAuth(`/documentos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
         delete: (id) => fetchWithAuth(`/documentos/${id}`, { method: 'DELETE' }),
@@ -146,6 +208,7 @@ export const api = {
             const query = new URLSearchParams(params).toString();
             return fetchWithAuth(`/citas?${query}`);
         },
+        getEventosDia: (fecha) => fetchWithAuth(`/citas/agenda-dia?fecha=${fecha || ''}`),
         create: (data) => fetchWithAuth('/citas', { method: 'POST', body: JSON.stringify(data) }),
         updateStatus: (id, estado) => fetchWithAuth(`/citas/${id}/status`, { method: 'PUT', body: JSON.stringify({ estado }) }),
         delete: (id) => fetchWithAuth(`/citas/${id}`, { method: 'DELETE' }),
@@ -238,6 +301,19 @@ export const api = {
                 if (!res.ok) return res.json().then(e => { throw e });
                 return res.json();
             });
+        }
+    },
+    backups: {
+        download: async () => {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const response = await fetch(`${API_URL}/backups/download`, {
+                headers: { 'Authorization': `Bearer ${user?.token}` }
+            });
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ message: 'Error en el servidor' }));
+                throw new Error(error.message || 'Error al descargar el backup');
+            }
+            return response.blob();
         }
     }
 };

@@ -108,4 +108,43 @@ const simpleUpload = async (req, res) => {
     });
 };
 
-module.exports = { uploadDocumento, getDocumentosByCliente, deleteDocumento, updateDocumento, simpleUpload };
+const getDocumentosByTramite = async (req, res) => {
+  const { tramiteId } = req.params;
+  try {
+    const documentos = await prisma.documento.findMany({
+      where: { tramiteId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(documentos);
+  } catch (err) {
+    res.status(500).json({ message: 'Error al obtener documentos del trámite', error: err.message });
+  }
+};
+
+const getAllDocumentos = async (req, res) => {
+  try {
+    const { search, tipo } = req.query;
+    const where = {};
+    if (tipo) where.tipo = tipo;
+    if (search) {
+      where.OR = [
+        { titulo: { contains: search } },
+        { tipo: { contains: search } }
+      ];
+    }
+    const documentos = await prisma.documento.findMany({
+      where,
+      include: {
+        cliente: { select: { nombres: true, apellidos: true } },
+        tramite: { select: { tipo: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200
+    });
+    res.json(documentos);
+  } catch (err) {
+    res.status(500).json({ message: 'Error al obtener documentos', error: err.message });
+  }
+};
+
+module.exports = { uploadDocumento, getDocumentosByCliente, deleteDocumento, updateDocumento, simpleUpload, getDocumentosByTramite, getAllDocumentos };

@@ -26,7 +26,7 @@ const strictLimiter = rateLimit({
 });
 
 app.use(cors({
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:5173', 'http://localhost:5001'],
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:5173', 'http://localhost:5001', 'http://localhost:5002'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
@@ -37,7 +37,7 @@ app.use('/api/', apiLimiter);
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const clienteRoutes = require('./routes/clienteRoutes');
-// const pagoRoutes = require('./routes/pagoRoutes');
+const pagoRoutes = require('./routes/pagoRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const armaRoutes = require('./routes/armaRoutes');
 const statsRoutes = require('./routes/statsRoutes');
@@ -55,6 +55,7 @@ const cajaRoutes = require('./routes/cajaRoutes');
 const notificacionRoutes = require('./routes/notificacionRoutes');
 const { startReminderJob } = require('./services/reminderService');
 const { initializeWhatsApp } = require('./services/whatsappService');
+const { initializeBackupJob } = require('./jobs/backupJob');
 const path = require('path');
 const fs = require('fs');
 
@@ -63,6 +64,7 @@ const ensureDirectories = () => {
   const dirs = [
     path.join(__dirname, '../uploads'),
     path.join(__dirname, '../uploads/fotos'),
+    path.join(__dirname, '../uploads/backups'),
     path.join(__dirname, '../templates')
   ];
   dirs.forEach(dir => {
@@ -78,8 +80,11 @@ ensureDirectories();
 // Iniciar cron jobs
 startReminderJob();
 initializeWhatsApp();
+initializeBackupJob();
 
 const whatsappRoutes = require('./routes/whatsappRoutes');
+
+const backupRoutes = require('./routes/backupRoutes');
 
 app.use('/api/auth', strictLimiter, authRoutes);
 app.use('/api/clientes', clienteRoutes);
@@ -99,7 +104,8 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/armas', armaRoutes);
 app.use('/api/users', userRoutes);
-// app.use('/api/pagos', pagoRoutes);
+app.use('/api/pagos', pagoRoutes);
+app.use('/api/backups', backupRoutes);
 
 
 

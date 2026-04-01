@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
 const sendEmail = async (to, subject, text, html) => {
     try {
         const info = await transporter.sendMail({
-            from: `"GestorArmas Pro" <notificaciones@dggestionarmas.com>`,
+            from: `"GestorArmas Pro" <${process.env.EMAIL_USER}>`,
             to,
             subject,
             text,

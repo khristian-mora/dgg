@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
 const Login = React.lazy(() => import('./pages/Login'));
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 const Register = React.lazy(() => import('./pages/Register'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
 const ClienteDashboard = React.lazy(() => import('./pages/ClienteDashboard'));
 const Clientes = React.lazy(() => import('./pages/Clientes'));
 const Tramites = React.lazy(() => import('./pages/Tramites'));
@@ -18,6 +20,7 @@ const Auditoria = React.lazy(() => import('./pages/Auditoria'));
 const ClientePerfil = React.lazy(() => import('./pages/ClientePerfil'));
 const TramiteDetalle = React.lazy(() => import('./pages/TramiteDetalle'));
 const Usuarios = React.lazy(() => import('./pages/Usuarios'));
+const HistorialGeneral = React.lazy(() => import('./pages/HistorialGeneral'));
 import NinjaSearch from './components/common/NinjaSearch'
 import CookiesConsent from './components/common/CookiesConsent'
 import ProtectedRoute from './components/rbac/ProtectedRoute'
@@ -25,7 +28,7 @@ import { useAuth } from './context/AuthContext'
 import { api } from './api/api'
 import { useState, useEffect } from 'react'
 import { Loader2, BookOpen, Wallet, FileCheck, ShieldCheck } from 'lucide-react'
-import { LogOut, LayoutDashboard, Users, FileText, Calendar, DollarSign, Settings, Shield, FolderOpen, BarChart2, Search, Command, ListChecks, Plus, ChevronRight } from 'lucide-react'
+import { LogOut, LayoutDashboard, Users, FileText, Calendar, DollarSign, Settings, Shield, FolderOpen, BarChart2, Search, Command, ListChecks, Plus, ChevronRight, Clock } from 'lucide-react'
 
 // Layout component to avoid repetition
 export const SidebarLayout = ({ children }) => {
@@ -80,6 +83,7 @@ export const SidebarLayout = ({ children }) => {
                                 <p className="text-[9px] font-black text-military-600 uppercase tracking-[0.2em] px-3">Administración</p>
                             </div>
                             <NavItem icon={<Wallet size={18}/>} label="Caja" to="/caja" />
+                            <NavItem icon={<Clock size={18}/>} label="Historial" to="/historial" />
                             <NavItem icon={<Users size={18}/>} label="Usuarios" to="/usuarios" />
                             <NavItem icon={<ShieldCheck size={18}/>} label="Auditoría" to="/auditoria" />
                             <NavItem icon={<BarChart2 size={18}/>} label="Inteligencia" to="/reportes" />
@@ -150,6 +154,7 @@ const Dashboard = () => {
     const [notificaciones, setNotificaciones] = useState([]);
     const [waStatus, setWaStatus] = useState({ status: 'DISCONNECTED', qrImage: null });
     const [showQRModal, setShowQRModal] = useState(false);
+    const [lastBackup, setLastBackup] = useState(null);
 
     useEffect(() => {
         fetchDashboardData();
@@ -167,17 +172,19 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
-            const [dashboardStats, tramites, citas, notifs] = await Promise.all([
+            const [dashboardStats, tramites, citas, notifs, backupConfig] = await Promise.all([
                 api.stats.getDashboard(),
                 api.tramites.getAll({ limit: 5 }),
                 api.citas.getAll({ fecha: new Date().toISOString().split('T')[0] }),
-                api.notificaciones.getAll(5)
+                api.notificaciones.getAll(5),
+                api.config.get('LAST_BACKUP_DATE').catch(() => ({ valor: null }))
             ]);
             
             setStats(dashboardStats);
             setTramitesRecientes(tramites.slice(0, 3));
             setCitasHoy(citas.slice(0, 4));
             setNotificaciones(notifs || []);
+            setLastBackup(backupConfig?.valor);
         } catch (error) {
             console.error('Error fetching dashboard:', error);
         } finally {
@@ -347,7 +354,9 @@ const Dashboard = () => {
                     <div className="glass p-8 rounded-[2.5rem] bg-gold-gradient/5 border-gold-500/20 text-center">
                         <ShieldCheck className="mx-auto text-gold-500 mb-4" size={32} />
                         <h4 className="text-sm font-black text-white uppercase tracking-widest mb-2">Backups Seguros</h4>
-                        <p className="text-[10px] text-military-500 font-bold uppercase tracking-tight">Copia de seguridad realizada hoy 04:00 AM</p>
+                        <p className="text-[10px] text-military-500 font-bold uppercase tracking-tight">
+                            {lastBackup ? `Última copia exitosa: ${new Date(lastBackup).toLocaleString()}` : 'Configurando sistema de backups...'}
+                        </p>
                     </div>
                </div>
             </div>
@@ -414,6 +423,8 @@ const App = () => {
             '/': 'DGG | GestorArmas Pro - Inicio',
             '/login': 'Iniciar Sesión | DGG',
             '/register': 'Registrarse | DGG',
+            '/forgot-password': 'Recuperar Contraseña | DGG',
+            '/reset-password': 'Nueva Contraseña | DGG',
             '/dashboard': 'Panel de Control | DGG',
             '/portal': 'Mi Portal del Ciudadano | DGG',
             '/clientes': 'Gestión de Clientes | DGG',
@@ -446,6 +457,8 @@ const App = () => {
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/" element={<LandingPage />} />
                     <Route 
                         path="/dashboard" 
@@ -466,7 +479,7 @@ const App = () => {
                     <Route 
                         path="/clientes" 
                         element={
-                            <ProtectedRoute>
+                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION']}>
                                 <SidebarLayout>
                                     <Clientes />
                                 </SidebarLayout>
@@ -476,7 +489,7 @@ const App = () => {
                     <Route 
                         path="/clientes/:id" 
                         element={
-                            <ProtectedRoute>
+                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION']}>
                                 <SidebarLayout>
                                     <ClientePerfil />
                                 </SidebarLayout>
@@ -486,7 +499,7 @@ const App = () => {
                     <Route 
                         path="/tramites" 
                         element={
-                            <ProtectedRoute>
+                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION']}>
                                 <SidebarLayout>
                                     <Tramites />
                                 </SidebarLayout>
@@ -496,7 +509,7 @@ const App = () => {
                     <Route 
                         path="/tramites/:id" 
                         element={
-                            <ProtectedRoute>
+                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION']}>
                                 <SidebarLayout>
                                     <TramiteDetalle />
                                 </SidebarLayout>
@@ -506,7 +519,7 @@ const App = () => {
                     <Route 
                         path="/formatos" 
                         element={
-                            <ProtectedRoute>
+                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION']}>
                                 <SidebarLayout>
                                     <Formatos />
                                 </SidebarLayout>
@@ -516,7 +529,7 @@ const App = () => {
                     <Route 
                         path="/soporte" 
                         element={
-                            <ProtectedRoute>
+                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION']}>
                                 <SidebarLayout>
                                     <Soporte />
                                 </SidebarLayout>
@@ -536,7 +549,7 @@ const App = () => {
                     <Route 
                         path="/agenda" 
                         element={
-                            <ProtectedRoute>
+                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION']}>
                                 <SidebarLayout>
                                     <Agenda />
                                 </SidebarLayout>
@@ -546,7 +559,7 @@ const App = () => {
                     <Route 
                         path="/documentos" 
                         element={
-                            <ProtectedRoute>
+                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION']}>
                                 <SidebarLayout>
                                     <Documentos />
                                 </SidebarLayout>
@@ -556,7 +569,7 @@ const App = () => {
                     <Route 
                         path="/config" 
                         element={
-                            <ProtectedRoute>
+                            <ProtectedRoute roles={['SUPER_ADMIN']}>
                                 <SidebarLayout>
                                     <Configuracion />
                                 </SidebarLayout>
@@ -576,7 +589,7 @@ const App = () => {
                     <Route 
                         path="/tareas" 
                         element={
-                            <ProtectedRoute>
+                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION']}>
                                 <SidebarLayout>
                                     <Tareas />
                                 </SidebarLayout>
@@ -600,6 +613,16 @@ const App = () => {
                             <ProtectedRoute roles={['SUPER_ADMIN']}>
                                 <SidebarLayout>
                                     <Auditoria />
+                                </SidebarLayout>
+                            </ProtectedRoute>
+                        } 
+                    />
+                    <Route 
+                        path="/historial" 
+                        element={
+                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION']}>
+                                <SidebarLayout>
+                                    <HistorialGeneral />
                                 </SidebarLayout>
                             </ProtectedRoute>
                         } 

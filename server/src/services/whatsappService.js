@@ -47,6 +47,43 @@ const initializeWhatsApp = () => {
         console.log('--- WhatsApp Bot desconectado ---', reason);
     });
 
+    const prisma = require('../config/prisma');
+    client.on('message', async (msg) => {
+        try {
+            if (msg.from === 'status@broadcast' || msg.isStatus) return;
+            
+            // Obtener el numero pelado. Viene como "573XXXXXXXXX@c.us"
+            const fromNumber = msg.from.replace('@c.us', '').replace(/^57/, ''); 
+            
+            const cliente = await prisma.cliente.findFirst({
+                where: {
+                    OR: [
+                        { celular: { contains: fromNumber } },
+                        { telefono: { contains: fromNumber } }
+                    ]
+                }
+            });
+
+            if (cliente) {
+                console.log(`[WA IN] Mensaje cliente ${cliente.nombres}: ${msg.body}`);
+                await prisma.notificacion.create({
+                    data: {
+                        clienteId: cliente.id,
+                        asunto: `WhatsApp de ${cliente.nombres}`,
+                        mensaje: msg.body,
+                        tipo: 'WHATSAPP_IN',
+                        canal: 'WHATSAPP'
+                    }
+                });
+            } else {
+                console.log(`[WA IN] Número desconocido (${msg.from}): ${msg.body}`);
+                // Opcional: Podríamos crear un "Prospecto" o guardar la notificación sin clienteId
+            }
+        } catch (err) {
+            console.error('[WA IN ERROR] Error procesando mensaje entrante:', err);
+        }
+    });
+
     client.initialize().catch(err => {
         console.error('Error al inicializar cliente WhatsApp:', err);
     });

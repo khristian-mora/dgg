@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, History, CheckCircle2, Clock, AlertCircle, User, FileText, ChevronRight, DollarSign, Loader2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api/api'
+import { REQUISITOS_LABELS } from '../config/tramiteConfig'
 import toast from 'react-hot-toast'
 
 const Tramites = () => {
@@ -31,12 +32,7 @@ const Tramites = () => {
         }
     };
 
-    const requisitosOficiales = {
-        'Permiso para Porte': ['Cédula original', 'Certificado Psicomédico ACE', 'Curso de Tiro', 'Certificado Laboral', 'Extractos 3 meses'],
-        'Permiso para Tenencia': ['Cédula original', 'Certificado Psicomédico ACE', 'Curso de Tiro', 'Escritura Pública o Contrato Arriendo'],
-        'Cesión de Armas': ['Cédula de Cedente y Cesionario', 'Ficha técnica del arma', 'Improntas del arma', 'Paz y Salvo de Indumil'],
-        'Revalidación': ['Cédula original', 'Carné actual para entrega', 'Certificado Psicomédico ACE', 'Improntas del arma']
-    };
+    const requisitosOficiales = REQUISITOS_LABELS;
 
     useEffect(() => {
         fetchTramites();
@@ -115,6 +111,7 @@ const Tramites = () => {
                                     <th className="p-6 text-[10px] font-black uppercase tracking-widest text-military-400">Cliente / Info</th>
                                     <th className="p-6 text-[10px] font-black uppercase tracking-widest text-military-400">Servicio / Tipo</th>
                                     <th className="p-6 text-[10px] font-black uppercase tracking-widest text-military-400">Estado / Última Acción</th>
+                                    <th className="p-6 text-[10px] font-black uppercase tracking-widest text-military-400">Progreso</th>
                                     <th className="p-6 text-[10px] font-black uppercase tracking-widest text-military-400">Finanzas</th>
                                     <th className="p-6"></th>
                                 </tr>
@@ -128,7 +125,7 @@ const Tramites = () => {
                                                     <User size={18} />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-white text-sm">{t.cliente?.nombre || 'Cliente'}</p>
+                                                    <p className="font-bold text-white text-sm">{t.cliente?.nombres ? `${t.cliente.nombres} ${t.cliente.apellidos}` : 'Cliente'}</p>
                                                     <p className="text-[10px] text-military-500 uppercase font-black">{t.cliente?.cedula || ''}</p>
                                                 </div>
                                             </div>
@@ -146,7 +143,24 @@ const Tramites = () => {
                                             </div>
                                             <div className="flex items-center gap-2 text-xs text-military-400">
                                                 <History size={12} className="shrink-0" />
-                                                <span className="truncate max-w-[180px]">{t.observaciones || 'Sin observaciones'}</span>
+                                                <span className="truncate max-w-[180px]">{t.ultimaAccion || t.observaciones || 'Sin acciones'}</span>
+                                            </div>
+                                            <p className="text-[9px] text-military-600 font-bold mt-1 uppercase tracking-widest">
+                                                {new Date(t.updatedAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            </p>
+                                        </td>
+                                        <td className="p-6">
+                                            <div className="flex flex-col gap-2 min-w-[120px]">
+                                                <div className="flex justify-between items-center text-[10px] font-black text-gold-500 uppercase">
+                                                    <span>AVANCE</span>
+                                                    <span>{t.progreso || 0}%</span>
+                                                </div>
+                                                <div className="w-full h-1.5 bg-military-900 rounded-full overflow-hidden border border-military-800">
+                                                    <div 
+                                                        className="h-full bg-gold-gradient transition-all duration-700" 
+                                                        style={{ width: `${t.progreso || 0}%` }} 
+                                                    />
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="p-6">

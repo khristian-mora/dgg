@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { 
     FileText, 
@@ -11,9 +11,24 @@ import {
     Loader2,
     Shield,
     DollarSign,
-    Info
+    Info,
+    Send,
+    Circle,
+    CheckCircle,
+    MessageSquare,
+    ChevronRight,
+    Play,
+    Check,
+    CreditCard,
+    Plus,
+    Trash2,
+    Edit3,
+    Upload,
+    FileCheck,
+    X
 } from 'lucide-react'
 import { api } from '../api/api'
+import { REQUISITOS_OFICIALES } from '../config/tramiteConfig'
 import toast from 'react-hot-toast'
 
 const TramiteDetalle = () => {
@@ -21,6 +36,19 @@ const TramiteDetalle = () => {
     const navigate = useNavigate();
     const [tramite, setTramite] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [advancing, setAdvancing] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showEditCostModal, setShowEditCostModal] = useState(false);
+    const [newCost, setNewCost] = useState('');
+    const [documentosTramite, setDocumentosTramite] = useState([]);
+    const [uploadingReq, setUploadingReq] = useState(null); // id del requisito que se está subiendo
+    const fileInputRef = useRef(null);
+    const [paymentForm, setPaymentForm] = useState({
+        valor: '',
+        metodoPago: 'EFECTIVO',
+        concepto: '',
+        comprobante: ''
+    });
 
     useEffect(() => {
         fetchTramite();
@@ -29,13 +57,94 @@ const TramiteDetalle = () => {
     const fetchTramite = async () => {
         try {
             setLoading(true);
-            const data = await api.tramites.getById(id);
+            const [data, docs] = await Promise.all([
+                api.tramites.getById(id),
+                api.documentos.getByTramite(id)
+            ]);
             setTramite(data);
+            setDocumentosTramite(docs);
         } catch (error) {
             console.error('Error fetching tramite:', error);
             toast.error('No se pudo cargar la información del trámite');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAvanzarPaso = async (e) => {
+        e.preventDefault();
+        const obs = prompt('Ingresa observaciones para este paso (opcional):');
+        const notificar = window.confirm('¿Deseas notificar al cliente vía WhatsApp?');
+        
+        try {
+            setAdvancing(true);
+            await api.tramites.avanzarPaso(id, { observaciones: obs, notificarCliente: notificar });
+            toast.success('Estado actualizado correctamente');
+            fetchTramite();
+        } catch (error) {
+            toast.error('Error al actualizar paso');
+        } finally {
+            setAdvancing(false);
+        }
+    };
+
+    const handleUpdateCost = async () => {
+        try {
+            await api.tramites.update(id, { valorAcuerdo: parseFloat(newCost) });
+            toast.success('Costo actualizado');
+            setShowEditCostModal(false);
+            fetchTramite();
+        } catch (error) {
+            toast.error('Error al actualizar costo');
+        }
+    };
+
+    const handleRegisterPayment = async (e) => {
+        e.preventDefault();
+        try {
+            await api.pagos.create({
+                tramiteId: id,
+                ...paymentForm
+            });
+            toast.success('Pago registrado con éxito');
+            setShowPaymentModal(false);
+            setPaymentForm({ valor: '', metodoPago: 'EFECTIVO', concepto: '', comprobante: '' });
+            fetchTramite();
+        } catch (error) {
+            toast.error('Error al registrar pago');
+        }
+    };
+
+    const handleDeletePago = async (pagoId) => {
+        if (!window.confirm('¿Estás seguro de eliminar este registro de pago?')) return;
+        try {
+            await api.pagos.delete(pagoId);
+            toast.success('Pago eliminado');
+            fetchTramite();
+        } catch (error) {
+            toast.error('Error al eliminar pago');
+        }
+    };
+
+    const handleSubirRequisito = async (requisito, file) => {
+        if (!file) return;
+        setUploadingReq(requisito.id);
+        try {
+            const formData = new FormData();
+            formData.append('archivo', file);
+            formData.append('clienteId', tramite.clienteId);
+            formData.append('tramiteId', id);
+            formData.append('tipo', requisito.id);
+            formData.append('titulo', requisito.label);
+            await api.documentos.upload(formData);
+            toast.success(`¡Documento "${requisito.label}" subido correctamente!`);
+            // Refrescar solo los documentos
+            const docs = await api.documentos.getByTramite(id);
+            setDocumentosTramite(docs);
+        } catch (error) {
+            toast.error('Error al subir el documento');
+        } finally {
+            setUploadingReq(null);
         }
     };
 
@@ -67,8 +176,44 @@ const TramiteDetalle = () => {
                 </div>
             </div>
 
+            {/* ROADMAP / STEPPER */}
+            <div className="glass p-8 rounded-[2.5rem] border border-military-100/10 overflow-x-auto">
+                <div className="flex items-start justify-between min-w-[800px] relative">
+                    <div className="absolute top-6 left-10 right-10 h-0.5 bg-military-800 z-0" />
+                    
+                    {tramite.roadmap?.map((step, index) => {
+                        const isCompleted = index < (tramite.pasos?.length || 0);
+                        const isCurrent = index === (tramite.pasos?.length || 0);
+                        
+                        return (
+                            <div key={step.id} className="relative z-10 flex flex-col items-center text-center w-32 group">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-all duration-300 border-2 ${
+                                    isCompleted ? 'bg-gold-500 border-gold-400 text-military-950 scale-110' : 
+                                    isCurrent ? 'bg-military-800 border-gold-500 text-gold-500 animate-pulse' : 
+                                    'bg-military-900 border-military-800 text-military-600'
+                                }`}>
+                                    {isCompleted ? <CheckCircle size={20} /> : <Circle size={20} />}
+                                </div>
+                                <p className={`text-[10px] font-black uppercase tracking-tighter mb-1 ${isCurrent ? 'text-gold-500' : 'text-military-400'}`}>{step.label}</p>
+                                <p className="text-[8px] text-military-600 font-bold leading-tight group-hover:text-military-400 transition-colors uppercase">{step.desc}</p>
+                                
+                                {isCurrent && (
+                                    <button 
+                                        onClick={handleAvanzarPaso}
+                                        disabled={advancing}
+                                        className="mt-4 px-3 py-1.5 bg-gold-gradient text-military-950 rounded-lg text-[9px] font-black uppercase hover:scale-105 transition-transform flex items-center gap-1"
+                                    >
+                                        <Send size={10} /> {advancing ? 'Procesando...' : 'Completar'}
+                                    </button>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Main Info */}
+                {/* Columna Izquierda: Info y Línea de Tiempo */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="glass p-8 rounded-[2.5rem] border border-military-100/10">
                         <div className="flex items-center justify-between mb-8">
@@ -95,11 +240,6 @@ const TramiteDetalle = () => {
                             <DetailItem icon={<Clock size={18}/>} label="Prioridad" value={tramite.esUrgente ? 'URGENTE' : 'ESTÁNDAR'} color={tramite.esUrgente ? 'text-red-500' : 'text-military-400'} />
                             <DetailItem icon={<Info size={18}/>} label="Última Actualización" value={new Date(tramite.updatedAt).toLocaleDateString('es-CO')} />
                         </div>
-
-                        <div className="mt-10 p-6 bg-military-900/50 rounded-3xl border border-military-800">
-                            <p className="text-[10px] font-black text-military-500 uppercase tracking-widest mb-3">Observaciones del Analista</p>
-                            <p className="text-sm text-military-200 leading-relaxed">{tramite.observaciones || 'Sin observaciones adicionales registradas.'}</p>
-                        </div>
                     </div>
 
                     {/* Cliente Relacionado */}
@@ -118,37 +258,315 @@ const TramiteDetalle = () => {
                             <ArrowLeft className="rotate-180" size={24} />
                         </div>
                     </div>
-                </div>
 
-                {/* Sidebar - Finanzas */}
-                <div className="space-y-6">
-                    <div className="glass p-8 rounded-[2.5rem] bg-gold-gradient text-military-950">
-                        <h3 className="text-xl font-black uppercase tracking-tighter mb-6 flex items-center gap-2">
-                            <DollarSign size={20} /> Control de Pagos
+                    {/* Línea de Tiempo / Historial de Pasos */}
+                    <div className="glass p-8 rounded-[2.5rem] border border-military-100/10">
+                        <h3 className="text-xl font-black text-white mb-8 uppercase tracking-tight flex items-center gap-3">
+                            <Clock className="text-gold-500" size={24} />
+                            Línea de Tiempo del Trámite
                         </h3>
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center border-b border-military-950/10 pb-3">
-                                <p className="text-[10px] font-bold uppercase opacity-70">Valor Acuerdo</p>
-                                <p className="text-xl font-black">${(tramite.valorAcuerdo || 0).toLocaleString()}</p>
-                            </div>
-                            <div className="flex justify-between items-center border-b border-military-950/10 pb-3">
-                                <p className="text-[10px] font-bold uppercase opacity-70">Abonos</p>
-                                <p className="text-xl font-black text-green-900">${(tramite.abono || 0).toLocaleString()}</p>
-                            </div>
-                            <div className="flex justify-between items-center pt-2">
-                                <p className="text-[10px] font-bold uppercase opacity-70">Saldo Pendiente</p>
-                                <p className={`text-2xl font-black ${(tramite.saldo || 0) > 0 ? 'text-red-800' : 'text-military-950'}`}>${(tramite.saldo || 0).toLocaleString()}</p>
-                            </div>
+                        
+                        <div className="relative pl-8 space-y-8 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-military-800">
+                            {tramite.pasos?.length > 0 ? tramite.pasos.map((paso, idx) => (
+                                <div key={paso.id} className="relative">
+                                    <div className={`absolute -left-[26px] top-1.5 w-4 h-4 rounded-full border-2 border-military-950 ${idx === 0 ? 'bg-gold-500 shadow-[0_0_10px_rgba(212,175,55,0.5)]' : 'bg-military-700'}`} />
+                                    <div className="bg-military-900/40 p-5 rounded-[2rem] border border-military-800/50 hover:bg-military-900/60 transition-all">
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-3">
+                                            <p className="text-sm font-bold text-white leading-tight">{paso.descripcion}</p>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <span className="px-2 py-1 bg-military-800 rounded-lg text-[9px] font-black text-military-400 uppercase tracking-widest flex items-center gap-1">
+                                                    <Calendar size={10} /> {new Date(paso.fechaAccion).toLocaleDateString('es-CO')}
+                                                </span>
+                                                <span className="px-2 py-1 bg-military-800 rounded-lg text-[9px] font-black text-military-400 uppercase tracking-widest flex items-center gap-1">
+                                                    <Clock size={10} /> {new Date(paso.fechaAccion).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded-full bg-military-800 flex items-center justify-center">
+                                                <User size={10} className="text-military-400" />
+                                            </div>
+                                            <p className="text-[10px] text-military-500 font-black uppercase tracking-widest">
+                                                Realizado por: <span className="text-military-300">{paso.realizadoPor || 'Sistema'}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="text-center py-10 border-2 border-dashed border-military-800 rounded-[2rem]">
+                                    <p className="text-xs text-military-600 font-bold uppercase tracking-widest">No hay actividad registrada aún</p>
+                                </div>
+                            )}
                         </div>
                     </div>
+                </div>
 
-                    <div className="glass p-8 rounded-[2.5rem] border border-military-800 text-center">
-                        <Shield className="mx-auto text-gold-500 mb-4" size={32} />
-                        <h4 className="text-xs font-black text-white uppercase tracking-widest mb-2">Seguridad DCCAE</h4>
-                        <p className="text-[10px] text-military-500 font-bold uppercase tracking-tight">Este trámite cumple con los protocolos vigentes de la Ley de Armas.</p>
+                {/* Columna Derecha: Finanzas, Requisitos y Pagos */}
+                <div className="space-y-6">
+                    {/* Tarjeta Financiera */}
+                    <div className="glass p-6 rounded-[2.5rem] border border-military-100/10 mb-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2 uppercase tracking-tight">
+                                <DollarSign className="text-gold-500" size={20} />
+                                Resumen Financiero
+                            </h3>
+                            <button 
+                                onClick={() => {
+                                    setNewCost(tramite.valorAcuerdo);
+                                    setShowEditCostModal(true);
+                                }}
+                                className="p-2 hover:bg-military-800 rounded-lg text-military-400 transition-all"
+                            >
+                                <Edit3 size={16} />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="bg-military-900/50 p-4 rounded-2xl border border-military-800">
+                                <p className="text-[10px] text-military-500 font-extrabold uppercase tracking-widest mb-1">Costo Total</p>
+                                <p className="text-xl font-black text-white">
+                                    ${Number(tramite.valorAcuerdo || 0).toLocaleString()}
+                                </p>
+                            </div>
+                            <div className="bg-military-900/50 p-4 rounded-2xl border border-military-800">
+                                <p className="text-[10px] text-military-500 font-extrabold uppercase tracking-widest mb-1">Saldo Pendiente</p>
+                                <p className={`text-xl font-black ${tramite.saldoPendiente > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                    ${Number(tramite.saldoPendiente || 0).toLocaleString()}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 mb-6">
+                            <div className="flex justify-between text-xs font-bold text-military-400">
+                                <span>Progreso de Pago</span>
+                                <span className="text-gold-500">{Math.round(((tramite.abonoTotal || 0) / (tramite.valorAcuerdo || 1)) * 100)}%</span>
+                            </div>
+                            <div className="h-2 bg-military-900 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-gold-gradient transition-all duration-1000 shadow-[0_0_10px_rgba(212,175,55,0.3)]"
+                                    style={{ width: `${Math.min(100, (tramite.abonoTotal || 0) / (tramite.valorAcuerdo || 1) * 100)}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => setShowPaymentModal(true)}
+                            className="w-full py-4 bg-gold-gradient text-military-950 font-black uppercase text-xs tracking-[0.2em] rounded-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-gold-500/10"
+                        >
+                            <Plus size={16} />
+                            Registrar Abono
+                        </button>
+                    </div>
+
+                    {/* === CHECKLIST DE REQUISITOS === */}
+                    {(() => {
+                        const requisitos = REQUISITOS_OFICIALES[tramite.tipo] || [];
+                        if (requisitos.length === 0) return null;
+
+                        const docsEntregados = requisitos.filter(req =>
+                            documentosTramite.some(doc =>
+                                doc.tipo === req.id || doc.titulo?.toLowerCase().includes(req.label.toLowerCase().substring(0, 12))
+                            )
+                        );
+                        const pct = Math.round((docsEntregados.length / requisitos.length) * 100);
+
+                        return (
+                            <div className="glass p-6 rounded-[2.5rem] border border-military-100/10">
+                                <div className="flex items-center justify-between mb-1">
+                                    <h3 className="text-lg font-bold text-white flex items-center gap-2 uppercase tracking-tight">
+                                        <FileCheck className="text-gold-500" size={20} />
+                                        Requisitos del Trámite
+                                    </h3>
+                                    <span className={`text-xs font-black px-2 py-1 rounded-lg ${
+                                        pct === 100 ? 'bg-green-500/10 text-green-400' : 'bg-gold-500/10 text-gold-500'
+                                    }`}>{docsEntregados.length}/{requisitos.length}</span>
+                                </div>
+
+                                <div className="mb-4">
+                                    <div className="flex justify-between text-[10px] font-black text-military-500 uppercase mb-1">
+                                        <span>Documentos entregados</span>
+                                        <span className={pct === 100 ? 'text-green-400' : 'text-gold-500'}>{pct}%</span>
+                                    </div>
+                                    <div className="h-1.5 bg-military-900 rounded-full overflow-hidden">
+                                        <div 
+                                            className={`h-full transition-all duration-700 rounded-full ${
+                                                pct === 100 ? 'bg-green-500' : 'bg-gold-gradient'
+                                            }`}
+                                            style={{ width: `${pct}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {requisitos.map((req) => {
+                                        const entregado = documentosTramite.some(doc =>
+                                            doc.tipo === req.id || doc.titulo?.toLowerCase().includes(req.label.toLowerCase().substring(0, 12))
+                                        );
+                                        const cargando = uploadingReq === req.id;
+
+                                        return (
+                                            <div key={req.id} className={`flex items-start gap-3 p-3 rounded-2xl border transition-all ${
+                                                entregado
+                                                    ? 'bg-green-500/5 border-green-500/20'
+                                                    : 'bg-military-900/40 border-military-800 hover:border-military-600'
+                                            }`}>
+                                                <div className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
+                                                    entregado ? 'bg-green-500' : 'bg-military-800 border border-military-700'
+                                                }`}>
+                                                    {entregado && <Check size={11} className="text-white" />}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`text-xs font-bold leading-tight ${
+                                                        entregado ? 'text-green-400' : 'text-white'
+                                                    }`}>{req.label}</p>
+                                                    <p className="text-[9px] text-military-600 font-bold mt-0.5 leading-tight">{req.descripcion}</p>
+                                                </div>
+                                                {!entregado && (
+                                                    <label className="shrink-0 cursor-pointer">
+                                                        <input
+                                                            type="file"
+                                                            className="hidden"
+                                                            onChange={(e) => {
+                                                                if (e.target.files[0]) handleSubirRequisito(req, e.target.files[0]);
+                                                                e.target.value = '';
+                                                            }}
+                                                            disabled={cargando}
+                                                        />
+                                                        <div className={`p-1.5 rounded-lg transition-all ${
+                                                            cargando
+                                                                ? 'bg-military-800 text-military-600'
+                                                                : 'bg-gold-500/10 text-gold-500 hover:bg-gold-500 hover:text-military-950'
+                                                        }`}>
+                                                            {cargando
+                                                                ? <Loader2 size={12} className="animate-spin" />
+                                                                : <Upload size={12} />}
+                                                        </div>
+                                                    </label>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Historial de Pagos */}
+                    <div className="glass p-8 rounded-[2.5rem] border border-military-100/10">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6 uppercase tracking-tight">
+                            <CreditCard className="text-gold-500" size={20} />
+                            Historial de Pagos
+                        </h3>
+                        
+                        <div className="space-y-4">
+                            {tramite.pagos?.length > 0 ? tramite.pagos.map((pago) => (
+                                <div key={pago.id} className="flex items-center justify-between p-4 bg-military-900/50 rounded-2xl border border-military-800 group">
+                                    <div>
+                                        <p className="font-bold text-white text-sm">${pago.valor.toLocaleString()}</p>
+                                        <p className="text-[10px] text-military-500 uppercase font-black tracking-widest mt-1">
+                                            {new Date(pago.fecha).toLocaleDateString()} • {pago.metodoPago}
+                                        </p>
+                                    </div>
+                                    <button 
+                                        onClick={() => handleDeletePago(pago.id)}
+                                        className="p-2 text-military-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            )) : (
+                                <div className="text-center py-6 border-2 border-dashed border-military-800 rounded-3xl">
+                                    <p className="text-xs text-military-600 font-bold uppercase tracking-widest">Sin registros de pago</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
+
+            {/* Modal de Registro de Pago */}
+            {showPaymentModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-military-950/80 backdrop-blur-sm">
+                    <div className="glass w-full max-w-md p-8 rounded-[3rem] border border-military-800 shadow-2xl">
+                        <h3 className="text-2xl font-black text-white mb-6 uppercase tracking-tight">Registrar Abono</h3>
+                        <form onSubmit={handleRegisterPayment} className="space-y-6">
+                            <div>
+                                <label className="block text-[10px] font-black text-military-500 uppercase tracking-widest mb-2">Monto del Pago</label>
+                                <input 
+                                    type="number" 
+                                    value={paymentForm.valor}
+                                    onChange={(e) => setPaymentForm({...paymentForm, valor: e.target.value})}
+                                    className="w-full bg-military-900 border border-military-800 rounded-2xl p-4 text-white focus:border-gold-500 outline-none font-bold"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-military-500 uppercase tracking-widest mb-2">Método de Pago</label>
+                                <select 
+                                    value={paymentForm.metodoPago}
+                                    onChange={(e) => setPaymentForm({...paymentForm, metodoPago: e.target.value})}
+                                    className="w-full bg-military-900 border border-military-800 rounded-2xl p-4 text-white focus:border-gold-500 outline-none font-bold"
+                                >
+                                    <option value="EFECTIVO">EFECTIVO</option>
+                                    <option value="TRANSFERENCIA">TRANSFERENCIA</option>
+                                    <option value="TARJETA">TARJETA</option>
+                                    <option value="CONSIGNACION">CONSIGNACIÓN</option>
+                                </select>
+                            </div>
+                            <div className="flex gap-4">
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowPaymentModal(false)}
+                                    className="flex-1 py-4 bg-military-900 text-military-400 font-bold rounded-2xl border border-military-800"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    type="submit"
+                                    className="flex-1 py-4 bg-gold-gradient text-military-950 font-black rounded-2xl"
+                                >
+                                    Confirmar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Editar Costo Total */}
+            {showEditCostModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-military-950/80 backdrop-blur-sm">
+                    <div className="glass w-full max-w-md p-8 rounded-[3rem] border border-military-800 shadow-2xl">
+                        <h3 className="text-2xl font-black text-white mb-6 uppercase tracking-tight">Editar Costo Total</h3>
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-[10px] font-black text-military-500 uppercase tracking-widest mb-2">Nuevo Valor del Trámite</label>
+                                <input 
+                                    type="number" 
+                                    value={newCost}
+                                    onChange={(e) => setNewCost(e.target.value)}
+                                    className="w-full bg-military-900 border border-military-800 rounded-2xl p-4 text-white focus:border-gold-500 outline-none font-bold"
+                                />
+                            </div>
+                            <div className="flex gap-4">
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowEditCostModal(false)}
+                                    className="flex-1 py-4 bg-military-900 text-military-400 font-bold rounded-2xl border border-military-800"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    onClick={handleUpdateCost}
+                                    className="flex-1 py-4 bg-gold-gradient text-military-950 font-black rounded-2xl"
+                                >
+                                    Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

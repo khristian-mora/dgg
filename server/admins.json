@@ -1,0 +1,26 @@
+[
+  {
+    "id": "cmmworhme0000qdasvsog0yn3",
+    "nombre": "Diana Gómez García",
+    "email": "admin@dggestionarmas.com",
+    "passwordHash": "$2b$10$HIinyRgVpbY6l/pXsHAxfOee20FuMsQhiOLBITnrFQVb80Z.0IP5S",
+    "rol": "SUPER_ADMIN",
+    "isActive": true,
+    "lastLogin": null,
+    "clienteId": null,
+    "createdAt": "2026-03-18T23:42:12.471Z",
+    "updatedAt": "2026-03-28T23:14:19.129Z"
+  },
+  {
+    "id": "cmmxmipz10000qd9kpqjy82ca",
+    "nombre": "Admin",
+    "email": "admin@dgg.com",
+    "passwordHash": "$2b$10$wgEQzwuz2fc6P8iyD5WxWOv3b.ZvsOF1ynC4LegdQZFyuES301azu",
+    "rol": "SUPER_ADMIN",
+    "isActive": true,
+    "lastLogin": null,
+    "clienteId": null,
+    "createdAt": "2026-03-19T15:27:10.333Z",
+    "updatedAt": "2026-03-19T15:27:10.333Z"
+  }
+]

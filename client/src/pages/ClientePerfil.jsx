@@ -160,6 +160,19 @@ const ClientePerfil = () => {
         }
     };
 
+    const handleDeleteDocumento = async (docId, reqName) => {
+        if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente el documento: ${reqName}?`)) return;
+        
+        try {
+            toast.loading('Eliminando documento...', { id: 'delete' });
+            await api.documentos.delete(docId);
+            toast.success('Documento eliminado correctamente', { id: 'delete' });
+            fetchClienteData();
+        } catch (error) {
+            toast.error('Error al eliminar documento', { id: 'delete' });
+        }
+    };
+
     const handleSaveClient = async () => {
         try {
             await api.clientes.update(id, editData);
@@ -282,15 +295,15 @@ const ClientePerfil = () => {
                             <ChevronLeft size={20} />
                         </button>
                         <h1 className="text-4xl font-black text-white tracking-tighter">{cliente.nombres} {cliente.apellidos}</h1>
-                        <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border ${cliente.tipo === 'CLIENTE' ? 'bg-gold-500/10 text-gold-500 border-gold-500/30' : 'bg-blue-500/10 text-blue-500 border-blue-500/30'}`}>
-                            {cliente.tipo}
+                        <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border ${cliente.tipoCliente === 'CLIENTE' ? 'bg-gold-500/10 text-gold-500 border-gold-500/30' : 'bg-blue-500/10 text-blue-500 border-blue-500/30'}`}>
+                            {cliente.tipoCliente}
                         </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-8">
                         <InfoItem icon={<FileText size={16}/>} label="Cédula" value={cliente.cedula} />
                         <InfoItem icon={<Phone size={16}/>} label="Teléfono" value={cliente.telefono} />
-                        <InfoItem icon={<Mail size={16}/>} label="Correo" value={cliente.email || 'No registrado'} />
+                        <InfoItem icon={<Mail size={16}/>} label="Correo" value={cliente.correoElectronico || cliente.email || 'No registrado'} />
                         <InfoItem icon={<MapPin size={16} />} label="Dirección / Barrio" value={`${cliente.direccion} / ${cliente.barrio || 'N/A'}`} />
                         <InfoItem icon={<Globe size={16} />} label="Nacionalidad" value={cliente.nacionalidad || 'COLOMBIANA'} />
                         <InfoItem icon={<MapPin size={16}/>} label="Ciudad / Depto" value={`${cliente.ciudad || 'No registrada'}, ${cliente.departamento || 'Colombia'}`} />
@@ -429,15 +442,25 @@ const ClientePerfil = () => {
 
                                         {/* Botón de Check (Admin/Empleado solo) */}
                                         {(req.status === 'CARGADO' || req.status === 'VERIFICADO') && (
-                                            <button 
-                                                onClick={() => handleToggleVerification(req.file.id, req.status === 'VERIFICADO', req.label)}
-                                                className={`p-3 rounded-xl transition-all ${
-                                                    req.status === 'VERIFICADO' ? 'bg-green-500 text-military-950' : 'bg-military-900 text-military-500 hover:text-green-500'
-                                                }`}
-                                                title={req.status === 'VERIFICADO' ? 'Quitar Verificación' : 'Verificar Documento'}
-                                            >
-                                                <CheckCircle2 size={18} />
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    onClick={() => handleToggleVerification(req.file.id, req.status === 'VERIFICADO', req.label)}
+                                                    className={`p-3 rounded-xl transition-all ${
+                                                        req.status === 'VERIFICADO' ? 'bg-green-500 text-military-950' : 'bg-military-900 text-military-500 hover:text-green-500'
+                                                    }`}
+                                                    title={req.status === 'VERIFICADO' ? 'Quitar Verificación' : 'Verificar Documento'}
+                                                >
+                                                    <CheckCircle2 size={18} />
+                                                </button>
+                                                
+                                                <button 
+                                                    onClick={() => handleDeleteDocumento(req.file.id, req.label)}
+                                                    className="p-3 bg-military-900 text-military-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-all"
+                                                    title="Eliminar Documento"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -485,7 +508,7 @@ const ClientePerfil = () => {
                              <p className="text-xs text-military-400 mb-6">Envíe este link al cliente para que cargue sus documentos directamente:</p>
                              <button 
                                 onClick={() => {
-                                    navigator.clipboard.writeText(`http://127.0.0.1:5173/direct-upload/${cliente.id}`);
+                                    navigator.clipboard.writeText(`${window.location.origin}/direct-upload/${cliente.id}`);
                                     toast.success('Enlace copiado al portapapeles');
                                 }}
                                 className="w-full py-4 bg-military-950 border border-military-800 text-military-400 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:text-white transition-colors"
@@ -599,8 +622,15 @@ const ClientePerfil = () => {
                                     >
                                         <option value="Permiso para Porte">Permiso para Porte</option>
                                         <option value="Permiso para Tenencia">Permiso para Tenencia</option>
+                                        <option value="Adquisición de Armas">Adquisición de Armas</option>
+                                        <option value="Revalidación de Salvoconducto">Revalidación de Salvoconducto</option>
                                         <option value="Cesión de Armas">Cesión de Armas</option>
-                                        <option value="Revalidación">Revalidación</option>
+                                        <option value="Compra de Munición">Compra de Munición</option>
+                                        <option value="Permiso Nacional">Permiso Nacional</option>
+                                        <option value="Permiso Regional">Permiso Regional</option>
+                                        <option value="Cambio de Correo">Cambio de Correo</option>
+                                        <option value="Usuarios Bloqueados">Usuarios Bloqueados</option>
+                                        <option value="Otros Trámites">Otros Trámites</option>
                                     </select>
                                 </div>
                                 <div>
@@ -713,30 +743,46 @@ const ClientePerfil = () => {
                         <div className="space-y-4">
                             {cliente.tramites?.map((tramite) => (
                                 <div key={tramite.id} className="glass p-6 rounded-[2rem] border border-military-100/10 flex items-center justify-between group">
-                                    <div className="flex gap-4 items-center">
-                                        <div className="w-12 h-12 rounded-2xl bg-military-900 flex items-center justify-center text-gold-500">
-                                            <FileText size={24} />
+                                        <div className="flex gap-4 items-center">
+                                            <div className="w-12 h-12 rounded-2xl bg-military-900 flex items-center justify-center text-gold-500">
+                                                <FileText size={20} />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-white uppercase text-sm tracking-tight">{tramite.tipo}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                                                        tramite.estado === 'FINALIZADO' ? 'bg-green-500/10 text-green-500' : 'bg-gold-500/10 text-gold-500'
+                                                    }`}>
+                                                        {tramite.estado}
+                                                    </span>
+                                                    <p className="text-[10px] text-military-500 font-black tracking-widest uppercase">ID: {tramite.id.slice(-8)}</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-bold text-white uppercase">{tramite.tipo}</p>
-                                            <p className="text-[10px] text-military-500 font-black tracking-widest uppercase">RAD: {tramite.id.slice(-8)} • {new Date(tramite.createdAt).toLocaleDateString()}</p>
+
+                                        <div className="flex items-center gap-8">
+                                            <div className="hidden md:flex flex-col gap-1.5 min-w-[140px]">
+                                                <div className="flex justify-between items-center text-[9px] font-black text-gold-500 uppercase tracking-widest">
+                                                    <span>Progreso</span>
+                                                    <p className="text-[9px] text-military-500 font-black tracking-widest uppercase">
+                                                    {tramite.createdAt ? new Date(tramite.createdAt).toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' }) : ''}
+                                                </p>
+                                                </div>
+                                                <div className="w-full h-1 bg-military-800 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className="h-full bg-gold-gradient transition-all duration-700" 
+                                                        style={{ width: `${tramite.progreso || 0}%` }} 
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <button 
+                                                onClick={() => navigate(`/tramites/${tramite.id}`)}
+                                                className="p-3 bg-military-900 border border-military-800 rounded-xl text-military-400 hover:text-gold-500 hover:border-gold-500/50 transition-all shadow-lg"
+                                            >
+                                                <ArrowRight size={20} />
+                                            </button>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-6">
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-black text-military-500 uppercase tracking-widest mb-1">Estado Actual</p>
-                                            <span className={`px-4 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
-                                                tramite.estado === 'FINALIZADO' ? 'bg-green-500/10 text-green-500' : 
-                                                tramite.estado === 'RECHAZADO' ? 'bg-red-500/10 text-red-500' : 
-                                                'bg-gold-500/10 text-gold-500'
-                                            }`}>
-                                                {tramite.estado}
-                                            </span>
-                                        </div>
-                                        <button onClick={() => navigate(`/tramites/${tramite.id}`)} className="p-3 bg-military-900 rounded-xl text-military-500 hover:text-white transition-all">
-                                            <ArrowRight size={20} />
-                                        </button>
-                                    </div>
                                 </div>
                             ))}
                         </div>
