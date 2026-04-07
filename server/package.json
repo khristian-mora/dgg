@@ -9,7 +9,7 @@
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:push": "npx prisma db push",
-    "test": "node test_prisma.js && node test_user_automation.js"
+    "test": "node test_prisma.js && node test_rbac.js && node test_user_automation.js"
   },
   "keywords": [],
   "author": "",

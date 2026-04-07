@@ -209,6 +209,10 @@ export const api = {
             return fetchWithAuth(`/citas?${query}`);
         },
         getEventosDia: (fecha) => fetchWithAuth(`/citas/agenda-dia?fecha=${fecha || ''}`),
+        getResumenMes: (params) => {
+            const query = new URLSearchParams(params).toString();
+            return fetchWithAuth(`/citas/agenda-resumen?${query}`);
+        },
         create: (data) => fetchWithAuth('/citas', { method: 'POST', body: JSON.stringify(data) }),
         updateStatus: (id, estado) => fetchWithAuth(`/citas/${id}/status`, { method: 'PUT', body: JSON.stringify({ estado }) }),
         delete: (id) => fetchWithAuth(`/citas/${id}`, { method: 'DELETE' }),

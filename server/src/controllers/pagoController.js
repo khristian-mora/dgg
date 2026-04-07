@@ -1,7 +1,10 @@
 const prisma = require('../config/prisma');
+const { sendEmail } = require('../services/emailService');
 
 const createPago = async (req, res) => {
-    const { tramiteId, valor, metodoPago, concepto, comprobante } = req.body;
+    const { tramiteId, valor, metodoPago, concepto, comprobante, fecha } = req.body;
+
+    console.log(`[PAGOS] Registrando abono para trámite ${tramiteId}, valor: ${valor}, fecha: ${fecha || 'Hoy'}`);
 
     try {
         const tramite = await prisma.tramite.findUnique({
@@ -11,19 +14,24 @@ const createPago = async (req, res) => {
 
         if (!tramite) return res.status(404).json({ message: 'Trámite no encontrado' });
 
-        // Crear el Pago
+        // 1. Crear el Pago (Operación Crítica)
+        const monto = parseFloat(valor);
+        if (isNaN(monto)) throw new Error('El valor del pago no es un número válido');
+
         const pago = await prisma.pago.create({
             data: {
                 tramiteId,
                 clienteId: tramite.clienteId,
-                valor: parseFloat(valor),
-                metodoPago,
+                valor: monto,
+                metodoPago: metodoPago || 'EFECTIVO',
                 concepto: concepto || `Abono a trámite: ${tramite.tipo}`,
-                comprobante
+                comprobante,
+                tipo: 'ABONO',
+                fecha: fecha ? new Date(fecha) : new Date()
             }
         });
 
-        // RECALCULAR Totales del Trámite
+        // 2. RECALCULAR Totales del Trámite (Crítico para el negocio)
         const pagosExistentes = await prisma.pago.findMany({
             where: { tramiteId }
         });
@@ -41,23 +49,43 @@ const createPago = async (req, res) => {
             }
         });
 
-        // Tambien registrar en Caja General para reporte contable unificado
-        await prisma.caja.create({
-            data: {
-                tipo: 'INGRESO',
-                concepto: `Pago Trámite ${tramite.tipo} - Cliente: ${tramite.cliente.nombres} ${tramite.cliente.apellidos}`,
-                valor: parseFloat(valor),
-                categoria: 'TRAMITE',
-                referencia: pago.id,
-                clienteId: tramite.clienteId,
-                metodoPago,
-                comprobante
+        // 3. SECUNDARIO: Registrar en Caja General
+        try {
+            await prisma.caja.create({
+                data: {
+                    tipo: 'INGRESO',
+                    concepto: `Pago Trámite ${tramite.tipo} - Cliente: ${tramite.cliente.nombres} ${tramite.cliente.apellidos}`,
+                    valor: monto,
+                    categoria: 'TRAMITE',
+                    referencia: pago.id,
+                    clienteId: tramite.clienteId,
+                    metodoPago: metodoPago || 'EFECTIVO',
+                    comprobante,
+                    fecha: fecha ? new Date(fecha) : new Date()
+                }
+            });
+            console.log(`[PAGOS] Registro en Caja exitoso`);
+        } catch (cajaErr) {
+            console.error('[PAGOS ERROR] Fallo al registrar en caja general (No crítico):', cajaErr);
+        }
+
+        // 4. SECUNDARIO: Notificación de Pago al Cliente
+        if (tramite.cliente.correoElectronico) {
+            try {
+                const subject = `Recibo de Pago: Abono a Trámite ${tramite.tipo}`;
+                const text = `Hola ${tramite.cliente.nombres}, hemos registrado tu abono de ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(monto)}. 
+                Concepto: ${concepto || 'Abono general'}. 
+                Nuevo Saldo Pendiente: ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(saldoPendiente)}.`;
+                
+                await sendEmail(tramite.cliente.correoElectronico, subject, text, { type: 'PAGO' });
+            } catch (notifyErr) {
+                console.error('[PAGOS ERROR] Fallo al enviar notificación de pago:', notifyErr);
             }
-        });
+        }
 
         res.status(201).json(pago);
     } catch (err) {
-        console.error('Error al registrar pago:', err);
+        console.error('[PAGOS CRITICAL ERROR]:', err);
         res.status(500).json({ message: 'Error al registrar el pago', error: err.message });
     }
 };

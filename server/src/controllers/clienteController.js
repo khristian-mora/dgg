@@ -23,6 +23,13 @@ const getClientes = async (req, res) => {
       },
       include: {
         armas: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            rol: true
+          }
+        },
         tramites: {
           orderBy: { createdAt: 'desc' },
           take: 1
@@ -81,11 +88,23 @@ const getClienteById = async (req, res) => {
           },
           orderBy: { createdAt: 'desc' }
         },
-        citas: { orderBy: { fecha: 'desc' }, take: 5 }
+        citas: { orderBy: { fecha: 'desc' }, take: 5 },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            rol: true
+          }
+        }
       }
     });
     
     if (!cliente) return res.status(404).json({ message: 'Cliente no encontrado' });
+
+    // Seguridad de Recurso: Si el usuario es un CLIENTE, solo puede ver su propia info
+    if (req.user.rol === 'CLIENTE' && req.user.clienteId !== id) {
+        return res.status(403).json({ message: 'No tiene permiso para ver la información de otro cliente' });
+    }
 
     // Desciframos campos para visualización de personal autorizado
     if (cliente.contrasenaDCCAE) cliente.contrasenaDCCAE = decrypt(cliente.contrasenaDCCAE);
@@ -228,4 +247,90 @@ const hardDeleteCliente = async (req, res) => {
     }
 };
 
-module.exports = { getClientes, createCliente, getClienteById, updateCliente, uploadFoto, deleteCliente, hardDeleteCliente };
+const activarPortal = async (req, res) => {
+    const { id } = req.params;
+    const bcrypt = require('bcrypt');
+    const { sendEmail } = require('../services/emailService');
+
+    try {
+        const cliente = await prisma.cliente.findUnique({ 
+            where: { id },
+            include: { user: true }
+        });
+
+        if (!cliente) return res.status(404).json({ message: 'Cliente no encontrado' });
+        
+        const email = cliente.correoElectronico || cliente.email;
+        if (!email) return res.status(400).json({ message: 'El cliente no tiene un correo electrónico registrado para activar el portal' });
+
+        let user = cliente.user;
+
+        // Si no tiene usuario, crearlo
+        if (!user) {
+            const hashedPassword = await bcrypt.hash(cliente.cedula, 10);
+            user = await prisma.user.create({
+                data: {
+                    nombre: `${cliente.nombres} ${cliente.apellidos}`,
+                    email: email,
+                    passwordHash: hashedPassword,
+                    rol: 'CLIENTE',
+                    clienteId: id
+                }
+            });
+        }
+
+        // Preparar Correo de Bienvenida / Credenciales
+        const htmlWelcome = `
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; padding: 40px; border: 1px solid #e1e1e1; border-radius: 20px; background-color: #ffffff; box-shadow: 0 10px 20px rgba(0,0,0,0.05);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #68774c; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -1px;">GestorArmas Pro</h1>
+              <p style="color: #a8b48f; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 3px; margin-top: 5px;">Diana Gomez Garcia</p>
+            </div>
+            
+            <div style="background: linear-gradient(135deg, #68774c 0%, #363d2b 100%); padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 30px;">
+              <h2 style="color: #ffffff; margin: 0; font-size: 20px;">¡Hola, ${cliente.nombres}!</h2>
+              <p style="color: #ccd3bc; margin: 10px 0 0 0; font-size: 14px;">Hemos habilitado tu acceso al de consulta de trámites.</p>
+            </div>
+
+            <p style="color: #4a5568; line-height: 1.6; font-size: 15px;">A través de esta plataforma podrás ver el avance de tus procesos en tiempo real y cargar documentos pendientes.</p>
+            
+            <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px dashed #cbd5e0; margin: 30px 0;">
+              <p style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase;">Tus credenciales de ingreso:</p>
+              <div style="margin: 15px 0;">
+                <p style="margin: 5px 0; font-size: 16px; color: #1e293b;"><strong>🌐 URL:</strong> <a href="https://www.dggestionarmas.com/portal" style="color: #68774c;">Acceder al Portal</a></p>
+                <p style="margin: 5px 0; font-size: 16px; color: #1e293b;"><strong>📧 Usuario:</strong> ${email}</p>
+                <p style="margin: 5px 0; font-size: 16px; color: #1e293b;"><strong>🔑 Contraseña:</strong> ${cliente.cedula}</p>
+              </div>
+              <p style="margin: 10px 0 0 0; font-size: 11px; color: #94a3b8; font-style: italic;">* Te recomendamos cambiar tu contraseña una vez ingreses por primera vez.</p>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 30px 0;" />
+            <p style="text-align: center; font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin: 0;">© 2026 Diana Gomez Garcia - Gestión Profesional de Trámites</p>
+          </div>
+        `;
+
+        await sendEmail(
+            email,
+            'Acceso al Portal de Trámites - DGG',
+            `Hola ${cliente.nombres}, tu cuenta ha sido activada: User: ${email}, Pass: ${cliente.cedula}`,
+            htmlWelcome
+        );
+
+        // Registro de Auditoría
+        await prisma.auditLog.create({
+            data: {
+                userId: req.user?.id,
+                accion: 'ACTIVACIÓN PORTAL',
+                modulo: 'CLIENTES',
+                detalle: `Se activó acceso al portal y se enviaron credenciales a: ${cliente.nombres} ${cliente.apellidos} (${email})`
+            }
+        });
+
+        res.json({ message: 'Portal activado y credenciales enviadas correctamente' });
+    } catch (err) {
+        console.error('Error in activarPortal:', err);
+        res.status(500).json({ message: 'Error al activar acceso al portal', error: err.message });
+    }
+};
+
+module.exports = { getClientes, createCliente, getClienteById, updateCliente, uploadFoto, deleteCliente, hardDeleteCliente, activarPortal };

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { DollarSign, TrendingUp, TrendingDown, Calendar, Plus, Camera, Image as ImageIcon, X, Loader2, CheckCircle2, User, Search, Download } from 'lucide-react'
 import { api, getResourceUrl } from '../api/api'
 import { toast } from 'react-hot-toast'
+import { formatCurrency, formatInputValue, parseAmount } from '../utils/formatters'
 
 const Caja = () => {
     const [view, setView] = useState('DIARIO');
@@ -94,7 +95,8 @@ const Caja = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.caja.registrar({ ...formData, valor: parseFloat(formData.valor) });
+            const payload = { ...formData, valor: parseAmount(formData.valor) };
+            await api.caja.registrar(payload);
             toast.success('Movimiento registrado');
             setShowModal(false);
             setFormData({ tipo: 'INGRESO', concepto: '', valor: '', categoria: 'tramite', metodoPago: 'NEQUI', notas: '', comprobante: '', clienteId: '' });
@@ -105,8 +107,6 @@ const Caja = () => {
             toast.error('Error al registrar');
         }
     };
-
-    const formatCOP = (val) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(val);
 
 
     return (
@@ -133,9 +133,9 @@ const Caja = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <FinanceCard label="Ingresos" value={formatCOP(resumen.ingresos)} icon={<TrendingUp />} color="green" />
-                <FinanceCard label="Egresos" value={formatCOP(resumen.egresos)} icon={<TrendingDown />} color="red" />
-                <FinanceCard label="Balance Total" value={formatCOP(resumen.balance)} icon={<DollarSign />} color="gold" />
+                <FinanceCard label="Ingresos" value={formatCurrency(resumen.ingresos)} icon={<TrendingUp />} color="green" />
+                <FinanceCard label="Egresos" value={formatCurrency(resumen.egresos)} icon={<TrendingDown />} color="red" />
+                <FinanceCard label="Balance Total" value={formatCurrency(resumen.balance)} icon={<DollarSign />} color="gold" />
             </div>
 
             <div className="glass p-8 rounded-[2.5rem]">
@@ -180,7 +180,7 @@ const Caja = () => {
                                         category={m.categoria} 
                                         type={m.tipo} 
                                         method={m.metodoPago}
-                                        value={formatCOP(m.valor)}
+                                        value={formatCurrency(m.valor)}
                                         comprobante={m.comprobante}
                                         cliente={m.cliente}
                                     />
@@ -261,7 +261,7 @@ const Caja = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-[10px] font-black uppercase tracking-widest text-military-500 mb-2 block">Valor (COP)</label>
-                                        <input required type="number" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} className="w-full bg-military-900 border border-military-800 rounded-xl px-4 py-3 text-white focus:border-gold-500 outline-none" placeholder="0" />
+                                        <input required type="text" value={formatInputValue(formData.valor)} onChange={e => setFormData({...formData, valor: e.target.value})} className="w-full bg-military-900 border border-military-800 rounded-xl px-4 py-3 text-white focus:border-gold-500 outline-none" placeholder="0" />
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-black uppercase tracking-widest text-military-500 mb-2 block">Método</label>

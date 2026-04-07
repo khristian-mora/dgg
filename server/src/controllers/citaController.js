@@ -54,14 +54,15 @@ const getCitas = async (req, res) => {
 };
 
 const createCita = async (req, res) => {
-  const { clienteId, tramiteId, fecha, motivo, recordatorioEnviado } = req.body;
+  const { clienteId, tramiteId, fecha, hora, motivo, recordatorioEnviado } = req.body;
   
   try {
     const cita = await prisma.cita.create({
       data: {
-        clienteId,
-        tramiteId,
+        clienteId: clienteId || null,
+        tramiteId: tramiteId || null,
         fecha: new Date(fecha),
+        hora,
         motivo,
         estado: 'PENDIENTE',
         recordatorioEnviado: recordatorioEnviado || false
@@ -71,8 +72,10 @@ const createCita = async (req, res) => {
     // Create a notification for the system
     await prisma.notificacion.create({
       data: {
+        clienteId: clienteId || null,
+        tramiteId: tramiteId || null,
         asunto: 'Nueva Cita Programada',
-        mensaje: `Cita para el día ${new Date(fecha).toLocaleDateString()} a las ${new Date(fecha).toLocaleTimeString()}`,
+        mensaje: `Cita para el día ${new Date(fecha).toLocaleDateString()} a las ${hora}`,
         tipo: 'CITA',
         canal: 'SISTEMA'
       }
@@ -80,6 +83,7 @@ const createCita = async (req, res) => {
 
     res.status(201).json(cita);
   } catch (err) {
+    console.error("Error creating cita:", err);
     res.status(400).json({ message: 'Error al agendar cita', error: err.message });
   }
 };
@@ -205,4 +209,33 @@ const getEventosDia = async (req, res) => {
   }
 };
 
-module.exports = { getCitas, createCita, updateCitaStatus, deleteCita, getEventosDia };
+const getResumenMes = async (req, res) => {
+  const { start, end } = req.query;
+  if (!start || !end) return res.status(400).json({ message: 'Faltan parámetros start/end' });
+
+  try {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    const [citas, tramites, pagos, pasos] = await Promise.all([
+      prisma.cita.findMany({ where: { fecha: { gte: startDate, lte: endDate } }, select: { fecha: true } }),
+      prisma.tramite.findMany({ where: { createdAt: { gte: startDate, lte: endDate } }, select: { createdAt: true } }),
+      prisma.pago.findMany({ where: { fecha: { gte: startDate, lte: endDate } }, select: { fecha: true } }),
+      prisma.pasoTramite.findMany({ where: { fechaAccion: { gte: startDate, lte: endDate } }, select: { fechaAccion: true } })
+    ]);
+
+    // Combinar todas las fechas en un set de días únicos (formato dia del mes o YYYY-MM-DD)
+    const diasConEventos = new Set();
+    
+    citas.forEach(c => diasConEventos.add(new Date(c.fecha).getUTCDate()));
+    tramites.forEach(t => diasConEventos.add(new Date(t.createdAt).getUTCDate()));
+    pagos.forEach(p => diasConEventos.add(new Date(p.fecha).getUTCDate()));
+    pasos.forEach(p => diasConEventos.add(new Date(p.fechaAccion).getUTCDate()));
+
+    res.json(Array.from(diasConEventos));
+  } catch (err) {
+    res.status(500).json({ message: 'Error en resumen mes', error: err.message });
+  }
+};
+
+module.exports = { getCitas, createCita, updateCitaStatus, deleteCita, getEventosDia, getResumenMes };

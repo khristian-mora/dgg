@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const { PROCEDURE_ROADMAPS } = require('../config/procedureRoadmaps');
+const { sendEmail } = require('../services/emailService');
 
 // List and search procedures
 const getTramites = async (req, res) => {
@@ -138,12 +139,17 @@ const getTramiteDetail = async (req, res) => {
         arma: true,
         pasos: { orderBy: { fechaAccion: 'desc' } },
         pagos: { orderBy: { fecha: 'desc' } },
-        documentos: true,
+        documentos: { orderBy: { createdAt: 'desc' } },
         citas: true
       }
     });
     
     if (!tramite) return res.status(404).json({ message: 'Trámite no encontrado' });
+
+    // Seguridad de Recurso: Si el usuario es un CLIENTE, solo puede ver su propio trámite
+    if (req.user.rol === 'CLIENTE' && req.user.clienteId !== tramite.clienteId) {
+        return res.status(403).json({ message: 'No tiene permiso para ver los detalles de este trámite' });
+    }
     
     // Calcular avance basado en el número de pasos registrados vs total del roadmap
     const roadmap = PROCEDURE_ROADMAPS[tramite.tipo] || PROCEDURE_ROADMAPS['DEFAULT'];
@@ -210,87 +216,145 @@ const updateEstado = async (req, res) => {
 
 const avanzarPaso = async (req, res) => {
     const { id } = req.params;
-    const { observaciones, notificarCliente } = req.body;
+    const { observaciones, notificarCliente, reminder, appointment } = req.body;
+    
+    console.log(`[AVANZAR PASO] Iniciando para trámite ${id}`);
     
     try {
         const tramite = await prisma.tramite.findUnique({
             where: { id },
-            include: { pasos: true, cliente: true }
+            include: { pasos: { orderBy: { fechaAccion: 'asc' } }, cliente: true }
         });
         
         if (!tramite) return res.status(404).json({ message: 'Trámite no encontrado' });
         
         const roadmap = PROCEDURE_ROADMAPS[tramite.tipo] || PROCEDURE_ROADMAPS['DEFAULT'];
-        const proximoPasoIndex = tramite.pasos.length; // 0-indexed index for the next step
+        const proximoPasoIndex = tramite.pasos.length;
         
         if (proximoPasoIndex >= roadmap.length) {
             return res.status(400).json({ message: 'El trámite ya ha completado todos los pasos del roadmap' });
         }
         
-        const infoPaso = roadmap[proximoPasoIndex];
+        const infoPaso = roadmap[proximoPasoIndex] || { id: proximoPasoIndex + 1, label: 'Paso Extra', desc: 'Gestión adicional' };
         const descripcionPaso = `PASO ${infoPaso.id}: ${infoPaso.label} - ${observaciones || infoPaso.desc}`;
         
-        // 1. Crear el paso en el historial
+        // 1. Registro del paso (Crítico)
         const nuevoPaso = await prisma.pasoTramite.create({
             data: {
                 tramiteId: id,
                 descripcion: descripcionPaso,
-                realizadoPor: req.user.nombre
+                realizadoPor: req.user.nombre || 'Sistema'
             }
         });
+        console.log(`[AVANZAR PASO] Paso registrado: ${nuevoPaso.id}`);
         
-        // 2. Actualizar el trámite
-        const tramiteActualizado = await prisma.tramite.update({
+        // 2. Actualizar trámite (Crítico)
+        const esUltimoPaso = proximoPasoIndex === roadmap.length - 1;
+        const nuevoEstado = esUltimoPaso ? 'COMPLETADO' : tramite.estado;
+        
+        await prisma.tramite.update({
             where: { id },
             data: { 
                 ultimaAccion: descripcionPaso,
-                estado: proximoPasoIndex === roadmap.length - 1 ? 'COMPLETADO' : tramite.estado,
-                updatedAt: new Date()
+                estado: nuevoEstado,
+                updatedAt: new Date(),
+                fechaFin: esUltimoPaso ? new Date() : tramite.fechaFin
             }
         });
+        console.log(`[AVANZAR PASO] Trámite actualizado. Estado: ${nuevoEstado}`);
         
-        // 3. Acciones Automáticas (Tareas/Citas)
-        if (infoPaso.action) {
-            if (infoPaso.action.startsWith('TASK_')) {
+        // 3. SECUNDARIO: Crear Recordatorio Manual (Tarea)
+        if (reminder && reminder.active && reminder.fecha) {
+            try {
+                const taskTitle = reminder.titulo || `Recordatorio: ${infoPaso.label}`;
+                const taskDesc = `${reminder.descripcion || 'Sin descripción adicional'}. Relacionado con: ${tramite.tipo} - ${tramite.cliente.nombres}`;
+                
                 await prisma.tarea.create({
                     data: {
-                        titulo: `${infoPaso.label}: ${tramite.tipo}`,
-                        descripcion: `Actividad automática: ${infoPaso.desc}. Cliente: ${tramite.cliente.nombres}`,
-                        fechaLimite: new Date(Date.now() + 72 * 60 * 60 * 1000), // 3 días
-                        prioridad: tramite.esUrgente ? 'URGENTE' : 'NORMAL',
-                        tipo: 'AUTOMATICA',
+                        titulo: taskTitle,
+                        descripcion: taskDesc,
+                        fechaLimite: new Date(reminder.fecha),
+                        prioridad: reminder.prioridad || 'NORMAL',
+                        tipo: 'MANUAL',
                         clienteId: tramite.clienteId,
-                        tramiteId: id
+                        tramiteId: id,
+                        asignadoPorId: req.user.id,
+                        asignadoAId: req.user.id
                     }
                 });
-            } else if (infoPaso.action.startsWith('APPOINTMENT_')) {
-                // Sugerir cita (en este caso creamos una pendiente de confirmar)
+
+                const emailText = `🔔 RECORDATORIO DGG: ${taskTitle}\n\nDetalle: ${taskDesc}\nFecha límite: ${new Date(reminder.fecha).toLocaleDateString()}\n\nEste recordatorio ha sido registrado en su expediente.`;
+                
+                // Emails (Try-catch ya incluido en sendEmail, pero aislamos por seguridad)
+                if (tramite.cliente.correoElectronico) {
+                    await sendEmail(tramite.cliente.correoElectronico, `Recordatorio: ${taskTitle}`, emailText, { type: 'NOTIFICACION' });
+                }
+                if (req.user.email) {
+                    await sendEmail(req.user.email, `Recordatorio (Asignado): ${taskTitle}`, emailText, { type: 'NOTIFICACION' });
+                }
+
+                await prisma.notificacion.create({
+                    data: {
+                        clienteId: tramite.clienteId,
+                        tramiteId: id,
+                        asunto: taskTitle,
+                        mensaje: taskDesc,
+                        tipo: 'RECORDATORIO_MANUAL',
+                        canal: 'EMAIL',
+                        estado: 'ENVIADO'
+                    }
+                });
+                console.log(`[AVANZAR PASO] Recordatorio creado con éxito`);
+            } catch (reminderErr) {
+                console.error('[AVANZAR PASO ERROR] Fallo en creación de recordatorio (No crítico):', reminderErr);
+            }
+        }
+
+        // 4. SECUNDARIO: Crear Cita Manual
+        if (appointment && appointment.active && appointment.fecha) {
+            try {
                 await prisma.cita.create({
                     data: {
-                        motivo: `${infoPaso.label}: ${tramite.tipo}`,
-                        descripcion: infoPaso.desc,
-                        fecha: new Date(Date.now() + 24 * 60 * 60 * 1000), // Mañana por defecto
-                        hora: '08:00',
+                        motivo: appointment.motivo || `Cita: ${infoPaso.label}`,
+                        descripcion: appointment.descripcion,
+                        fecha: new Date(appointment.fecha),
+                        hora: appointment.hora,
                         estado: 'PENDIENTE',
                         clienteId: tramite.clienteId,
                         tramiteId: id
                     }
                 });
+                console.log(`[AVANZAR PASO] Cita agendada con éxito`);
+            } catch (citaErr) {
+                console.error('[AVANZAR PASO ERROR] Fallo en creación de cita (No crítico):', citaErr);
             }
         }
         
-        // 4. Notificación al cliente
-        if (notificarCliente) {
-            await prisma.notificacion.create({
-                data: {
-                    clienteId: tramite.clienteId,
-                    tramiteId: id,
-                    asunto: `Actualización de Trámite: ${infoPaso.label}`,
-                    mensaje: `Hola ${tramite.cliente.nombres}, tu trámite de ${tramite.tipo} ha avanzado al paso: ${infoPaso.label}. ${observaciones || ''}`,
-                    tipo: 'ESTADO_TRAMITE',
-                    canal: 'WHATSAPP'
-                }
-            });
+        // 5. SECUNDARIO: Notificación de paso avanzado al cliente
+        if (notificarCliente && tramite.cliente.correoElectronico) {
+            try {
+                await sendEmail(
+                    tramite.cliente.correoElectronico, 
+                    `Actualización de Trámite: ${infoPaso.label}`, 
+                    `Hola ${tramite.cliente.nombres}, tu trámite de ${tramite.tipo} ha avanzado al paso: ${infoPaso.label}. ${observaciones || ''}`,
+                    { type: 'TRAMITE' }
+                );
+
+                await prisma.notificacion.create({
+                    data: {
+                        clienteId: tramite.clienteId,
+                        tramiteId: id,
+                        asunto: `Actualización: ${infoPaso.label}`,
+                        mensaje: `Paso avanzado a ${infoPaso.label}. ${observaciones || ''}`,
+                        tipo: 'ESTADO_TRAMITE',
+                        canal: 'EMAIL',
+                        estado: 'ENVIADO'
+                    }
+                });
+                console.log(`[AVANZAR PASO] Notificación enviada al cliente`);
+            } catch (notifErr) {
+                console.error('[AVANZAR PASO ERROR] Fallo en notificación al cliente (No crítico):', notifErr);
+            }
         }
         
         res.json({
@@ -300,7 +364,12 @@ const avanzarPaso = async (req, res) => {
         });
         
     } catch (err) {
-        res.status(500).json({ message: 'Error al avanzar paso', error: err.message });
+        console.error('[AVANZAR PASO CRITICAL ERROR]:', err);
+        res.status(500).json({ 
+            message: 'Error al avanzar paso', 
+            error: err.message,
+            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        });
     }
 };
 

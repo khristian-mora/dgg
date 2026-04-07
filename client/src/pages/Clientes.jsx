@@ -153,7 +153,14 @@ const Clientes = () => {
                                         {c.nombres?.charAt(0)}
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-white leading-tight">{c.nombres} {c.apellidos}</h4>
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-bold text-white leading-tight">{c.nombres} {c.apellidos}</h4>
+                                            {c.user ? (
+                                                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" title="Portal Activo" />
+                                            ) : (
+                                                <div className="w-2 h-2 rounded-full bg-military-700" title="Sin Acceso al Portal" />
+                                            )}
+                                        </div>
                                         <p className="text-xs text-military-500 mt-1 uppercase tracking-wider">{c.cedula}</p>
                                     </div>
                                 </div>
@@ -291,6 +298,7 @@ const Clientes = () => {
                                     <th className="px-6 py-4 text-xs font-black text-gold-500 uppercase tracking-widest">Teléfono</th>
                                     <th className="px-6 py-4 text-xs font-black text-gold-500 uppercase tracking-widest">Categoría</th>
                                     <th className="px-6 py-4 text-xs font-black text-gold-500 uppercase tracking-widest">Estado</th>
+                                    <th className="px-6 py-4 text-xs font-black text-gold-500 uppercase tracking-widest text-center">Portal</th>
                                     <th className="px-6 py-4 text-xs font-black text-gold-500 uppercase tracking-widest text-right">Acciones</th>
                                 </tr>
                             </thead>
@@ -327,6 +335,13 @@ const Clientes = () => {
                                                 <div className={`w-1.5 h-1.5 rounded-full ${c.estado === 'ACTIVO' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-military-500'}`} />
                                                 <span>{c.estado || 'ACTIVO'}</span>
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            {c.user ? (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black bg-green-500/10 text-green-500 border border-green-500/20 uppercase tracking-tighter">Activo</span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black bg-military-800 text-military-500 border border-military-700 uppercase tracking-tighter">Inactivo</span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end space-x-2">

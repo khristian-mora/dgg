@@ -3,7 +3,7 @@ const qrcode = require('qrcode-terminal');
 const path = require('path');
 
 // Global client state
-let clientStatus = 'DISCONNECTED';
+let clientStatus = 'DISABLED';
 let lastQR = null;
 
 const client = new Client({
@@ -91,7 +91,7 @@ const initializeWhatsApp = () => {
 
 const sendAutomatedMessage = async (phone, message) => {
     if (clientStatus !== 'CONNECTED') {
-        console.warn('Intento de envío fallido: WhatsApp no está conectado.');
+        console.warn('Intento de envío fallido: WhatsApp está DESACTIVADO por configuración.');
         return false;
     }
 

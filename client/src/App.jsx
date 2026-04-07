@@ -28,11 +28,14 @@ import { useAuth } from './context/AuthContext'
 import { api } from './api/api'
 import { useState, useEffect } from 'react'
 import { Loader2, BookOpen, Wallet, FileCheck, ShieldCheck } from 'lucide-react'
-import { LogOut, LayoutDashboard, Users, FileText, Calendar, DollarSign, Settings, Shield, FolderOpen, BarChart2, Search, Command, ListChecks, Plus, ChevronRight, Clock } from 'lucide-react'
+import { LogOut, LayoutDashboard, Users, FileText, Calendar, DollarSign, Settings, Shield, FolderOpen, BarChart2, Search, Command, ListChecks, Plus, ChevronRight, Clock, Info } from 'lucide-react'
 
 // Layout component to avoid repetition
 export const SidebarLayout = ({ children }) => {
     const { user, logout, isSuperAdmin } = useAuth();
+
+    // Si el usuario es un cliente, no mostramos barra lateral (layout limpio para el portal)
+    if (user?.rol === 'CLIENTE') return <div className="min-h-screen bg-military-950">{children}</div>;
     
     return (
         <div className="flex min-h-screen bg-military-950 text-military-100 overflow-hidden">
@@ -152,31 +155,22 @@ const Dashboard = () => {
     const [tramitesRecientes, setTramitesRecientes] = useState([]);
     const [citasHoy, setCitasHoy] = useState([]);
     const [notificaciones, setNotificaciones] = useState([]);
-    const [waStatus, setWaStatus] = useState({ status: 'DISCONNECTED', qrImage: null });
-    const [showQRModal, setShowQRModal] = useState(false);
+    const [tareasPendientes, setTareasPendientes] = useState([]);
     const [lastBackup, setLastBackup] = useState(null);
 
     useEffect(() => {
         fetchDashboardData();
-        const interval = setInterval(fetchWaStatus, 5000); // Check status every 5s
-        return () => clearInterval(interval);
-    }, []);
-
-    const fetchWaStatus = async () => {
-        try {
-            const status = await api.whatsapp.getStatus();
-            setWaStatus(status);
-        } catch (e) { /* ignore */ }
-    }
+    }, [location.pathname]);
 
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
-            const [dashboardStats, tramites, citas, notifs, backupConfig] = await Promise.all([
+            const [dashboardStats, tramites, citas, notifs, tasks, backupConfig] = await Promise.all([
                 api.stats.getDashboard(),
                 api.tramites.getAll({ limit: 5 }),
                 api.citas.getAll({ fecha: new Date().toISOString().split('T')[0] }),
                 api.notificaciones.getAll(5),
+                api.tareas.getAll({ status: 'PENDIENTE', period: 'day' }),
                 api.config.get('LAST_BACKUP_DATE').catch(() => ({ valor: null }))
             ]);
             
@@ -184,6 +178,7 @@ const Dashboard = () => {
             setTramitesRecientes(tramites.slice(0, 3));
             setCitasHoy(citas.slice(0, 4));
             setNotificaciones(notifs || []);
+            setTareasPendientes(tasks); // Show all today's tasks (usually few)
             setLastBackup(backupConfig?.valor);
         } catch (error) {
             console.error('Error fetching dashboard:', error);
@@ -253,31 +248,32 @@ const Dashboard = () => {
                     <div className="glass p-8 rounded-[2.5rem]">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                <Search size={20} className="text-gold-500" /> Notificaciones CRM (Recordatorios)
+                                <ListChecks size={20} className="text-gold-500" /> Tareas y Recordatorios Activos
                             </h3>
-                            <button className="text-[10px] font-black text-military-500 hover:text-white uppercase tracking-widest">VER TODAS</button>
+                            <Link to="/tareas" className="text-[10px] font-black text-military-500 hover:text-white uppercase tracking-widest">VER TODAS</Link>
                         </div>
                         <div className="space-y-4">
-                            {notificaciones.length === 0 ? (
-                                <p className="text-military-500 text-sm text-center py-4 italic">No hay recordatorios pendientes para hoy</p>
+                            {tareasPendientes.length === 0 ? (
+                                <p className="text-military-500 text-sm text-center py-4 italic">No hay tareas pendientes en el radar</p>
                             ) : (
-                                notificaciones.map(n => (
-                                    <div key={n.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl bg-military-900/40 border border-military-800/50 hover:border-gold-500/30 transition-all gap-4">
+                                tareasPendientes.map(task => (
+                                    <div key={task.id} className="flex items-center justify-between p-4 rounded-2xl bg-military-900/40 border border-military-800/50 hover:border-gold-500/30 transition-all border-l-4 border-l-gold-500">
                                         <div className="flex items-start gap-4">
-                                            <div className={`p-3 rounded-xl ${n.tipo === 'CUMPLEANIOS' ? 'bg-pink-500/10 text-pink-500' : 'bg-gold-500/10 text-gold-500'}`}>
-                                                {n.tipo === 'CUMPLEANIOS' ? <Plus size={18} /> : <Calendar size={18} />}
+                                            <div className={`p-3 rounded-xl bg-gold-500/10 text-gold-500`}>
+                                                <Clock size={18} />
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-black uppercase text-military-500 tracking-widest">{n.asunto}</p>
-                                                <p className="text-xs text-white mt-1 leading-relaxed">{n.mensaje}</p>
+                                                <p className="text-[10px] font-black uppercase text-military-500 tracking-widest">Límite: {new Date(task.fechaLimite).toLocaleDateString()}</p>
+                                                <p className="text-sm font-bold text-white mt-1 leading-relaxed">{task.titulo}</p>
+                                                <p className="text-[10px] text-military-400 mt-1">{task.descripcion}</p>
                                             </div>
                                         </div>
-                                        <button 
-                                            onClick={() => handleWhatsApp(n)}
-                                            className="px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-xl text-[10px] font-black uppercase hover:bg-green-500 hover:text-white transition-all whitespace-nowrap"
+                                        <Link 
+                                            to={task.tramiteId ? `/tramites/${task.tramiteId}` : '/tareas'}
+                                            className="px-4 py-2 bg-military-800 text-military-100 rounded-xl text-[10px] font-black uppercase hover:bg-gold-500 hover:text-military-950 transition-all"
                                         >
-                                            ENVIAR WHATSAPP
-                                        </button>
+                                            GESTIONAR
+                                        </Link>
                                     </div>
                                 ))
                             )}
@@ -288,34 +284,22 @@ const Dashboard = () => {
                {/* Derecha - Agenda */}
                <div className="space-y-8">
                     {/* Bot WhatsApp Status Card */}
-                    <div className={`glass p-6 rounded-[2.5rem] border-2 transition-all ${waStatus.status === 'CONNECTED' ? 'border-green-500/30' : 'border-gold-500/30'}`}>
+                    {/* Resumen de Historial Card */}
+                    <div className="glass p-6 rounded-[2.5rem] border border-military-100/10 mb-6 bg-military-900/20">
                         <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-xs font-black text-white uppercase tracking-widest">Bot de WhatsApp</h4>
-                            <div className={`w-2 h-2 rounded-full animate-pulse ${waStatus.status === 'CONNECTED' ? 'bg-green-500' : 'bg-gold-500'}`} />
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                <Info size={14} className="text-gold-500" /> Registro de Actividad
+                            </h4>
                         </div>
-                        
-                        {waStatus.status === 'CONNECTED' ? (
-                            <div className="text-center py-4">
-                                <ShieldCheck className="mx-auto text-green-500 mb-2" size={32} />
-                                <p className="text-[10px] text-green-400 font-bold uppercase">BOT ACTIVO Y VINCULADO</p>
-                            </div>
-                        ) : waStatus.qrImage ? (
-                            <div className="text-center space-y-3">
-                                <p className="text-[10px] text-military-400 font-bold uppercase mb-2 leading-tight">DOBLE CLIC PARA AMPLIAR</p>
-                                <img 
-                                    src={waStatus.qrImage} 
-                                    alt="QR WhatsApp" 
-                                    className="mx-auto w-32 h-32 rounded-xl bg-white p-1 cursor-pointer hover:scale-105 transition-transform" 
-                                    onDoubleClick={() => setShowQRModal(true)}
-                                />
-                                <button className="text-[9px] font-black text-gold-500 hover:text-white transition-colors">¿CÓMO VINCULAR?</button>
-                            </div>
-                        ) : (
-                            <div className="text-center py-8">
-                                <Loader2 className="mx-auto text-military-700 animate-spin" size={24} />
-                                <p className="text-[9px] text-military-500 font-bold uppercase mt-2">Iniciando motor...</p>
-                            </div>
-                        )}
+                        <div className="space-y-4">
+                            {notificaciones.slice(0, 3).map(n => (
+                                <div key={n.id} className="border-l-2 border-military-800 pl-4 py-1">
+                                    <p className="text-[10px] font-bold text-white uppercase truncate">{n.asunto}</p>
+                                    <p className="text-[9px] text-military-500 mt-0.5">{new Date(n.fechaEnvio).toLocaleDateString()}</p>
+                                </div>
+                            ))}
+                            <Link to="/historial" className="text-[10px] font-black text-gold-500 hover:underline uppercase block mt-4">IR AL HISTORIAL COMPLETO</Link>
+                        </div>
                     </div>
 
                     <div className="glass p-8 rounded-[2.5rem]">
@@ -361,26 +345,6 @@ const Dashboard = () => {
                </div>
             </div>
 
-            {/* Modal para Expandir QR */}
-            {showQRModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 animate-in fade-in zoom-in duration-300 backdrop-blur-sm">
-                    <div className="relative glass p-10 rounded-[3rem] border-2 border-gold-500/30 max-w-sm w-full text-center">
-                        <button 
-                            onClick={() => setShowQRModal(false)}
-                            className="absolute -top-4 -right-4 w-10 h-10 rounded-full bg-gold-gradient text-military-950 flex items-center justify-center font-black shadow-xl hover:scale-110 transition-transform"
-                        >
-                            X
-                        </button>
-                        <h3 className="text-xl font-black text-white uppercase tracking-widest mb-6">Escanea el Código</h3>
-                        <div className="bg-white p-4 rounded-3xl shadow-2xl mb-6">
-                            <img src={waStatus.qrImage} alt="QR Full" className="w-full h-auto" />
-                        </div>
-                        <p className="text-xs text-military-300 font-bold leading-relaxed">
-                            Abre WhatsApp {'>'} Dispositivos Vinculados {'>'} Vincular Dispositivo {'>'} Escanea este código.
-                        </p>
-                    </div>
-                </div>
-            )}
         </SidebarLayout>
     );
 };
@@ -509,7 +473,7 @@ const App = () => {
                     <Route 
                         path="/tramites/:id" 
                         element={
-                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION']}>
+                            <ProtectedRoute roles={['SUPER_ADMIN', 'GESTION', 'CLIENTE']}>
                                 <SidebarLayout>
                                     <TramiteDetalle />
                                 </SidebarLayout>

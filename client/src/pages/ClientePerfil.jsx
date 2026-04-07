@@ -202,6 +202,19 @@ const ClientePerfil = () => {
         }
     };
 
+    const handleActivarPortal = async () => {
+        try {
+            toast.loading('Activando portal y enviando credenciales...', { id: 'portal' });
+            await api.clientes.activarPortal(id);
+            toast.success('Portal activado / Credenciales enviadas', { id: 'portal' });
+            fetchClienteData();
+        } catch (error) {
+            console.error('Error activating portal:', error);
+            const msg = error.response?.data?.message || 'Error al activar acceso';
+            toast.error(msg, { id: 'portal' });
+        }
+    };
+
     const ArmaFotosSection = ({ arma }) => {
         const fotoFields = [
             { name: 'foto1', label: 'Foto 1' },
@@ -471,8 +484,39 @@ const ClientePerfil = () => {
                     {/* Sidebar: Digital Factory */}
                     <div className="space-y-6">
                         <div className="glass p-8 rounded-[2.5rem] bg-gold-gradient text-military-950">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xl font-black uppercase tracking-tighter">Portal de Cliente</h3>
+                                {cliente.user ? (
+                                    <div className="w-3 h-3 rounded-full bg-military-950 flex shadow-[0_0_8px_rgba(0,0,0,0.3)] animate-pulse" title="Acceso Activo" />
+                                ) : (
+                                    <Shield size={20} className="opacity-50" />
+                                )}
+                            </div>
+                            <p className="text-[11px] font-bold uppercase tracking-widest mb-6 opacity-70">
+                                {cliente.user ? 'El cliente ya tiene acceso al portal digital.' : 'Habilita el acceso para que el cliente consulte su trámite.'}
+                            </p>
+                            
+                            <div className="space-y-3">
+                                {!cliente.user && (
+                                    <button 
+                                        onClick={handleActivarPortal}
+                                        className="w-full py-4 bg-military-950/20 border border-military-950/30 text-military-950 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-military-950 hover:text-white transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Lock size={14} /> Activar Portal
+                                    </button>
+                                )}
+                                {cliente.user && (
+                                    <button 
+                                        onClick={handleActivarPortal}
+                                        className="w-full py-4 bg-military-950 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Mail size={14} /> Re-enviar Credenciales
+                                    </button>
+                                )}
+                            </div>
+                            <div className="h-px bg-military-950/10 my-3" />
                             <h3 className="text-xl font-black uppercase tracking-tighter mb-4">Digital Factory</h3>
-                            <p className="text-[11px] font-bold uppercase tracking-widest mb-6 opacity-70">Generación Automática de Documentos Oficiales</p>
+                            <p className="text-[11px] font-bold uppercase tracking-widest mb-6 opacity-70">Generación Automática de Documentos</p>
                             
                             <div className="space-y-3">
                                 {formatos.length === 0 ? (

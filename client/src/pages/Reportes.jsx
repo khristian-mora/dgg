@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { TrendingUp, Users, FileText, DollarSign, Download, Filter, Loader2, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../api/api';
+import { formatCurrency } from '../utils/formatters';
 import toast from 'react-hot-toast';
 
 const Reportes = () => {
@@ -80,8 +81,6 @@ const Reportes = () => {
         else newDate.setFullYear(selectedDate.getFullYear() + 1);
         setSelectedDate(newDate);
     };
-
-    const formatCurrency = (val) => `$${(val || 0).toLocaleString()}`;
 
     const getPeriodLabel = () => {
         if (periodType === 'diario') return selectedDate.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });

@@ -9,12 +9,15 @@ const getTareas = async (req, res) => {
   today.setHours(0, 0, 0, 0);
 
   if (period === 'day') {
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfSearch = new Date(today);
+    startOfSearch.setHours(-12); // Buffer for UTC/Local offsets
+    const endOfSearch = new Date(today);
+    endOfSearch.setHours(36); // Extend to end of day + buffer
+    
     dateFilter = {
       fechaLimite: {
-        gte: today,
-        lte: endOfDay
+        gte: startOfSearch,
+        lte: endOfSearch
       }
     };
   } else if (period === 'week') {
@@ -41,10 +44,14 @@ const getTareas = async (req, res) => {
     // Role-based filtering logic
     let roleFilter = {};
     if (req.user.rol !== 'SUPER_ADMIN') {
-      // Non-admins only see tasks assigned to them
-      roleFilter = { asignadoAId: req.user.id };
+      // Non-admins see tasks assigned to them OR created by them
+      roleFilter = {
+        OR: [
+          { asignadoAId: req.user.id },
+          { asignadoPorId: req.user.id }
+        ]
+      };
     } else if (userId) {
-      // Admins can filter by specific userId if provided
       roleFilter = { asignadoAId: userId };
     }
 
@@ -63,7 +70,7 @@ const getTareas = async (req, res) => {
         cliente: { select: { nombres: true, apellidos: true, cedula: true } },
         tramite: { select: { tipo: true, estado: true } }
       },
-      orderBy: { fechaLimite: 'asc' }
+      orderBy: { createdAt: 'desc' }
     });
     
     res.json(tareas);

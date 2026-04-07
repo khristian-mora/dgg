@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
     User, FileText, ShieldCheck, Shield,
     Upload, CheckCircle2, Circle, Clock,
@@ -11,6 +12,7 @@ import { api, getResourceUrl } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { REQUISITOS_OFICIALES } from '../config/tramiteConfig';
+import { formatCurrency } from '../utils/formatters';
 
 // ─── Roadmap local (espejo del server) ─────────────────────────
 const ROADMAPS = {
@@ -336,6 +338,12 @@ const ClienteDashboard = () => {
                                             <p className="text-[10px] font-black text-gold-500 mt-3 uppercase tracking-widest">
                                                 Paso {pasosCompletados} de {roadmapSteps.length} • {progreso}%
                                             </p>
+                                            <Link 
+                                                to={`/tramites/${activeTramite.id}`}
+                                                className="mt-4 inline-flex items-center gap-2 text-[10px] font-black text-white hover:text-gold-500 uppercase tracking-widest transition-colors group/btn"
+                                            >
+                                                Ver Expediente Completo <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                                            </Link>
                                         </div>
                                     </div>
 
@@ -374,13 +382,13 @@ const ClienteDashboard = () => {
                                             <div className="p-4 bg-military-950/50 rounded-2xl border border-military-800 text-center">
                                                 <p className="text-[9px] font-black text-military-500 uppercase tracking-widest mb-1">Valor Total</p>
                                                 <p className="text-sm font-black text-white">
-                                                    {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(activeTramite.valorAcuerdo)}
+                                                    {formatCurrency(activeTramite.valorAcuerdo)}
                                                 </p>
                                             </div>
                                             <div className="p-4 bg-green-500/5 rounded-2xl border border-green-500/20 text-center">
                                                 <p className="text-[9px] font-black text-military-500 uppercase tracking-widest mb-1">Pagado</p>
                                                 <p className="text-sm font-black text-green-400">
-                                                    {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(activeTramite.abonoTotal || 0)}
+                                                    {formatCurrency(activeTramite.abonoTotal || 0)}
                                                 </p>
                                             </div>
                                             <div className={`p-4 rounded-2xl border text-center ${activeTramite.pazYSalvo ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
@@ -388,7 +396,7 @@ const ClienteDashboard = () => {
                                                 <p className={`text-sm font-black ${activeTramite.pazYSalvo ? 'text-green-400' : 'text-red-400'}`}>
                                                     {activeTramite.pazYSalvo
                                                         ? '✓ Paz y Salvo'
-                                                        : new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(activeTramite.saldoPendiente || 0)}
+                                                        : formatCurrency(activeTramite.saldoPendiente || 0)}
                                                 </p>
                                             </div>
                                         </div>
@@ -557,7 +565,11 @@ const ClienteDashboard = () => {
                                 <h4 className="text-[10px] font-black text-gold-500 uppercase tracking-widest mb-4">Historial de Trámites</h4>
                                 <div className="space-y-3">
                                     {cliente.tramites.slice(0, 4).map(t => (
-                                        <div key={t.id} className="flex items-center justify-between p-3 bg-military-950/50 rounded-2xl">
+                                        <Link 
+                                            key={t.id} 
+                                            to={`/tramites/${t.id}`}
+                                            className="flex items-center justify-between p-3 bg-military-950/50 rounded-2xl hover:bg-military-800 transition-all border border-transparent hover:border-gold-500/20 group"
+                                        >
                                             <div>
                                                 <p className="text-xs font-bold text-white truncate max-w-[140px]">{t.tipo}</p>
                                                 <p className="text-[9px] text-military-500 uppercase">{new Date(t.createdAt).toLocaleDateString('es-CO')}</p>
@@ -567,7 +579,7 @@ const ClienteDashboard = () => {
                                                 t.estado === 'RECHAZADO'  ? 'bg-red-500/10 text-red-500' :
                                                 'bg-gold-500/10 text-gold-500'
                                             }`}>{t.estado}</span>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             </div>

@@ -28,12 +28,17 @@ import {
     X
 } from 'lucide-react'
 import { api } from '../api/api'
+import { useAuth } from '../context/AuthContext'
+import { formatCurrency, formatInputValue, parseAmount } from '../utils/formatters'
 import { REQUISITOS_OFICIALES } from '../config/tramiteConfig'
 import toast from 'react-hot-toast'
+import AdvancementModal from '../components/tramites/AdvancementModal'
 
 const TramiteDetalle = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
+    const isAdminOrGestion = user?.rol === 'SUPER_ADMIN' || user?.rol === 'GESTION';
     const [tramite, setTramite] = useState(null);
     const [loading, setLoading] = useState(true);
     const [advancing, setAdvancing] = useState(false);
@@ -47,8 +52,11 @@ const TramiteDetalle = () => {
         valor: '',
         metodoPago: 'EFECTIVO',
         concepto: '',
-        comprobante: ''
+        comprobante: '',
+        fecha: new Date().toISOString().split('T')[0],
+        comprobanteFile: null
     });
+    const [showAdvancementModal, setShowAdvancementModal] = useState(false);
 
     useEffect(() => {
         fetchTramite();
@@ -71,18 +79,19 @@ const TramiteDetalle = () => {
         }
     };
 
-    const handleAvanzarPaso = async (e) => {
-        e.preventDefault();
-        const obs = prompt('Ingresa observaciones para este paso (opcional):');
-        const notificar = window.confirm('¿Deseas notificar al cliente vía WhatsApp?');
-        
+    const handleAvanzarPaso = () => {
+        setShowAdvancementModal(true);
+    };
+
+    const confirmAvanzarPaso = async (data) => {
         try {
             setAdvancing(true);
-            await api.tramites.avanzarPaso(id, { observaciones: obs, notificarCliente: notificar });
-            toast.success('Estado actualizado correctamente');
+            await api.tramites.avanzarPaso(id, data);
+            toast.success('Paso completado con éxito');
             fetchTramite();
         } catch (error) {
-            toast.error('Error al actualizar paso');
+            console.error('Error al avanzar paso:', error);
+            toast.error('Error al actualizar el trámite');
         } finally {
             setAdvancing(false);
         }
@@ -90,7 +99,7 @@ const TramiteDetalle = () => {
 
     const handleUpdateCost = async () => {
         try {
-            await api.tramites.update(id, { valorAcuerdo: parseFloat(newCost) });
+            await api.tramites.update(id, { valorAcuerdo: parseAmount(newCost) });
             toast.success('Costo actualizado');
             setShowEditCostModal(false);
             fetchTramite();
@@ -102,16 +111,42 @@ const TramiteDetalle = () => {
     const handleRegisterPayment = async (e) => {
         e.preventDefault();
         try {
-            await api.pagos.create({
-                tramiteId: id,
-                ...paymentForm
-            });
+            setAdvancing(true);
+            let comprobanteUrl = paymentForm.comprobante;
+
+            // 1. Subir archivo si existe
+            if (paymentForm.comprobanteFile) {
+                const formData = new FormData();
+                formData.append('archivo', paymentForm.comprobanteFile);
+                const uploadRes = await api.documentos.simpleUpload(formData);
+                comprobanteUrl = uploadRes.url;
+            }
+
+            // 2. Crear Pago
+            const payload = { 
+                ...paymentForm, 
+                valor: parseAmount(paymentForm.valor),
+                comprobante: comprobanteUrl,
+                tramiteId: id
+            };
+            
+            await api.pagos.create(payload);
             toast.success('Pago registrado con éxito');
             setShowPaymentModal(false);
-            setPaymentForm({ valor: '', metodoPago: 'EFECTIVO', concepto: '', comprobante: '' });
+            setPaymentForm({ 
+                valor: '', 
+                metodoPago: 'EFECTIVO', 
+                concepto: '', 
+                comprobante: '',
+                fecha: new Date().toISOString().split('T')[0],
+                comprobanteFile: null
+            });
             fetchTramite();
         } catch (error) {
-            toast.error('Error al registrar pago');
+            console.error('Error al registrar pago:', error);
+            toast.error('Error al registrar el pago');
+        } finally {
+            setAdvancing(false);
         }
     };
 
@@ -167,7 +202,10 @@ const TramiteDetalle = () => {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <button onClick={() => navigate(-1)} className="p-3 bg-military-900 rounded-2xl text-military-400 hover:text-white transition-all">
+                <button 
+                    onClick={() => user?.rol === 'CLIENTE' ? navigate('/portal') : navigate(-1)} 
+                    className="p-3 bg-military-900 rounded-2xl text-military-400 hover:text-white transition-all"
+                >
                     <ArrowLeft size={20} />
                 </button>
                 <div>
@@ -310,28 +348,30 @@ const TramiteDetalle = () => {
                                 <DollarSign className="text-gold-500" size={20} />
                                 Resumen Financiero
                             </h3>
-                            <button 
-                                onClick={() => {
-                                    setNewCost(tramite.valorAcuerdo);
-                                    setShowEditCostModal(true);
-                                }}
-                                className="p-2 hover:bg-military-800 rounded-lg text-military-400 transition-all"
-                            >
-                                <Edit3 size={16} />
-                            </button>
+                            {isAdminOrGestion && (
+                                <button 
+                                    onClick={() => {
+                                        setNewCost(tramite.valorAcuerdo);
+                                        setShowEditCostModal(true);
+                                    }}
+                                    className="p-2 hover:bg-military-800 rounded-lg text-military-400 transition-all"
+                                >
+                                    <Edit3 size={16} />
+                                </button>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 mb-6">
                             <div className="bg-military-900/50 p-4 rounded-2xl border border-military-800">
                                 <p className="text-[10px] text-military-500 font-extrabold uppercase tracking-widest mb-1">Costo Total</p>
                                 <p className="text-xl font-black text-white">
-                                    ${Number(tramite.valorAcuerdo || 0).toLocaleString()}
+                                    {formatCurrency(tramite.valorAcuerdo || 0)}
                                 </p>
                             </div>
                             <div className="bg-military-900/50 p-4 rounded-2xl border border-military-800">
                                 <p className="text-[10px] text-military-500 font-extrabold uppercase tracking-widest mb-1">Saldo Pendiente</p>
                                 <p className={`text-xl font-black ${tramite.saldoPendiente > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                                    ${Number(tramite.saldoPendiente || 0).toLocaleString()}
+                                    {formatCurrency(tramite.saldoPendiente || 0)}
                                 </p>
                             </div>
                         </div>
@@ -349,13 +389,14 @@ const TramiteDetalle = () => {
                             </div>
                         </div>
 
-                        <button 
-                            onClick={() => setShowPaymentModal(true)}
-                            className="w-full py-4 bg-gold-gradient text-military-950 font-black uppercase text-xs tracking-[0.2em] rounded-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-gold-500/10"
-                        >
-                            <Plus size={16} />
-                            Registrar Abono
-                        </button>
+                        {isAdminOrGestion && (
+                            <button 
+                                onClick={() => setShowPaymentModal(true)}
+                                className="w-full py-4 bg-gold-gradient text-military-950 font-black rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2"
+                            >
+                                <Plus size={20} /> Registrar Abono
+                            </button>
+                        )}
                     </div>
 
                     {/* === CHECKLIST DE REQUISITOS === */}
@@ -462,17 +503,32 @@ const TramiteDetalle = () => {
                             {tramite.pagos?.length > 0 ? tramite.pagos.map((pago) => (
                                 <div key={pago.id} className="flex items-center justify-between p-4 bg-military-900/50 rounded-2xl border border-military-800 group">
                                     <div>
-                                        <p className="font-bold text-white text-sm">${pago.valor.toLocaleString()}</p>
+                                        <p className="font-bold text-white text-sm">{formatCurrency(pago.valor || 0)}</p>
                                         <p className="text-[10px] text-military-500 uppercase font-black tracking-widest mt-1">
                                             {new Date(pago.fecha).toLocaleDateString()} • {pago.metodoPago}
                                         </p>
                                     </div>
-                                    <button 
-                                        onClick={() => handleDeletePago(pago.id)}
-                                        className="p-2 text-military-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        {pago.comprobante && (
+                                            <a 
+                                                href={pago.comprobante.startsWith('http') ? pago.comprobante : `http://localhost:5000${pago.comprobante}`} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="p-2 text-gold-500 hover:text-white transition-all bg-military-800 rounded-xl"
+                                                title="Ver comprobante"
+                                            >
+                                                <FileText size={14} />
+                                            </a>
+                                        )}
+                                        {isAdminOrGestion && (
+                                            <button 
+                                                onClick={() => handleDeletePago(pago.id)}
+                                                className="p-2 text-military-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all bg-military-800 rounded-xl"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             )) : (
                                 <div className="text-center py-6 border-2 border-dashed border-military-800 rounded-3xl">
@@ -490,15 +546,28 @@ const TramiteDetalle = () => {
                     <div className="glass w-full max-w-md p-8 rounded-[3rem] border border-military-800 shadow-2xl">
                         <h3 className="text-2xl font-black text-white mb-6 uppercase tracking-tight">Registrar Abono</h3>
                         <form onSubmit={handleRegisterPayment} className="space-y-6">
-                            <div>
-                                <label className="block text-[10px] font-black text-military-500 uppercase tracking-widest mb-2">Monto del Pago</label>
-                                <input 
-                                    type="number" 
-                                    value={paymentForm.valor}
-                                    onChange={(e) => setPaymentForm({...paymentForm, valor: e.target.value})}
-                                    className="w-full bg-military-900 border border-military-800 rounded-2xl p-4 text-white focus:border-gold-500 outline-none font-bold"
-                                    required
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-military-500 uppercase tracking-widest mb-2">Monto del Pago</label>
+                                    <input 
+                                        type="text" 
+                                        value={formatInputValue(paymentForm.valor)}
+                                        onChange={(e) => setPaymentForm({...paymentForm, valor: e.target.value})}
+                                        className="w-full bg-military-900 border border-military-800 rounded-2xl p-4 text-white focus:border-gold-500 outline-none font-bold"
+                                        required
+                                        placeholder="0"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-military-500 uppercase tracking-widest mb-2">Fecha del Pago</label>
+                                    <input 
+                                        type="date" 
+                                        value={paymentForm.fecha}
+                                        onChange={(e) => setPaymentForm({...paymentForm, fecha: e.target.value})}
+                                        className="w-full bg-military-900 border border-military-800 rounded-2xl p-4 text-white focus:border-gold-500 outline-none font-bold"
+                                        required
+                                    />
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black text-military-500 uppercase tracking-widest mb-2">Método de Pago</label>
@@ -512,6 +581,27 @@ const TramiteDetalle = () => {
                                     <option value="TARJETA">TARJETA</option>
                                     <option value="CONSIGNACION">CONSIGNACIÓN</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-military-500 uppercase tracking-widest mb-2">Prueba del Abono (Opcional)</label>
+                                <div className="relative">
+                                    <input 
+                                        type="file"
+                                        onChange={(e) => setPaymentForm({...paymentForm, comprobanteFile: e.target.files[0]})}
+                                        className="hidden"
+                                        id="comprobante-upload"
+                                        accept="image/*,application/pdf"
+                                    />
+                                    <label 
+                                        htmlFor="comprobante-upload"
+                                        className="flex items-center justify-between w-full bg-military-900/50 border border-dashed border-military-700 rounded-2xl p-4 cursor-pointer hover:border-gold-500 transition-all text-xs font-bold text-military-300"
+                                    >
+                                        <span className="truncate max-w-[200px]">
+                                            {paymentForm.comprobanteFile ? paymentForm.comprobanteFile.name : 'Seleccionar archivo...'}
+                                        </span>
+                                        <Upload size={16} className="text-gold-500" />
+                                    </label>
+                                </div>
                             </div>
                             <div className="flex gap-4">
                                 <button 
@@ -542,10 +632,11 @@ const TramiteDetalle = () => {
                             <div>
                                 <label className="block text-[10px] font-black text-military-500 uppercase tracking-widest mb-2">Nuevo Valor del Trámite</label>
                                 <input 
-                                    type="number" 
-                                    value={newCost}
+                                    type="text" 
+                                    value={formatInputValue(newCost)}
                                     onChange={(e) => setNewCost(e.target.value)}
                                     className="w-full bg-military-900 border border-military-800 rounded-2xl p-4 text-white focus:border-gold-500 outline-none font-bold"
+                                    placeholder="0"
                                 />
                             </div>
                             <div className="flex gap-4">
@@ -567,6 +658,14 @@ const TramiteDetalle = () => {
                     </div>
                 </div>
             )}
+
+            <AdvancementModal 
+                isOpen={showAdvancementModal}
+                onClose={() => setShowAdvancementModal(false)}
+                onConfirm={confirmAvanzarPaso}
+                currentStep={tramite?.roadmap?.[tramite?.pasos?.length || 0]}
+                tramiteTipo={tramite?.tipo}
+            />
         </div>
     );
 };

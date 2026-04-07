@@ -38,13 +38,15 @@ const Agenda = () => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [eventos, setEventos] = useState([]);
     const [clientes, setClientes] = useState([]);
+    const [monthEvents, setMonthEvents] = useState({});
+    const [upcomingCitas, setUpcomingCitas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [activeMenu, setActiveMenu] = useState(null);
     const [filterTipo, setFilterTipo] = useState('ALL');
     const [formData, setFormData] = useState({
         clienteId: '',
-        fecha: selectedDate.toISOString().split('T')[0],
+        fecha: new Date().toISOString().split('T')[0],
         hora: '08:00',
         motivo: ''
     });
@@ -52,14 +54,56 @@ const Agenda = () => {
     useEffect(() => {
         fetchEventos();
         fetchClientes();
-    }, [selectedDate]);
+        fetchMonthMarkers();
+        fetchUpcoming();
+    }, [selectedDate.getMonth(), selectedDate.getFullYear()]);
+
+    useEffect(() => {
+        // Al cambiar de día específico, solo recargamos eventos de ese día
+        fetchEventos();
+    }, [selectedDate.getDate()]);
 
     const fetchClientes = async () => {
         try {
-            const data = await api.users.getAll();
-            setClientes(data.filter(u => u.rol === 'CLIENTE'));
+            const data = await api.clientes.getAll();
+            setClientes(data.map(c => ({
+                id: c.id,
+                nombre: `${c.nombres} ${c.apellidos}`,
+                cedula: c.cedula
+            })));
         } catch (error) {
             console.error('Error fetching clients:', error);
+        }
+    };
+
+    const fetchMonthMarkers = async () => {
+        try {
+            const firstDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+            const lastDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+            
+            const days = await api.citas.getResumenMes({ 
+                start: firstDay.toISOString(), 
+                end: lastDay.toISOString() 
+            });
+            
+            const markers = {};
+            days.forEach(day => {
+                markers[day] = 1;
+            });
+            setMonthEvents(markers);
+        } catch (error) {
+            console.error('Error fetching markers:', error);
+        }
+    };
+
+    const fetchUpcoming = async () => {
+        try {
+            const data = await api.citas.getAll({ 
+                start: new Date().toISOString()
+            });
+            setUpcomingCitas(data.slice(0, 3));
+        } catch (error) {
+            console.error('Error fetching upcoming:', error);
         }
     };
 
@@ -83,8 +127,10 @@ const Agenda = () => {
             await api.citas.create(formData);
             toast.success('Cita programada exitosamente');
             setShowModal(false);
-            setFormData({ clienteId: '', fecha: '', hora: '', motivo: '' });
+            setFormData({ clienteId: '', fecha: new Date().toISOString().split('T')[0], hora: '08:00', motivo: '' });
             fetchEventos();
+            fetchMonthMarkers(); // Refresh markers
+            fetchUpcoming(); // Refresh upcoming
         } catch (error) {
             toast.error('Error al crear cita');
         }
@@ -168,13 +214,16 @@ const Agenda = () => {
                                         newDate.setDate(day);
                                         setSelectedDate(newDate);
                                     }}
-                                    className={`w-full aspect-square flex items-center justify-center rounded-xl text-xs font-bold transition-all ${
+                                    className={`relative w-full aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-bold transition-all ${
                                         isToday ? 'bg-gold-500 text-military-950 shadow-[0_0_15px_rgba(213,161,21,0.4)]' : 
                                         isSelected ? 'bg-military-700 text-white ring-1 ring-gold-500/40' :
                                         'text-military-400 hover:bg-military-800 hover:text-military-100'
                                     }`}
                                 >
                                     {day}
+                                    {monthEvents[day] > 0 && !isToday && (
+                                        <div className="absolute bottom-1 w-1 h-1 rounded-full bg-gold-500" />
+                                    )}
                                 </button>
                             );
                         })}
@@ -198,6 +247,26 @@ const Agenda = () => {
                                 <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border ${cfg.badge}`}>{conteo[tipo] || 0}</span>
                             </button>
                         ))}
+                    </div>
+
+                    {/* Próximas Citas */}
+                    <div className="mt-8 pt-6 border-t border-military-100/5">
+                        <h4 className="text-[10px] font-black text-military-500 uppercase tracking-widest mb-4">Próximas Citas Activas</h4>
+                        <div className="space-y-3">
+                            {upcomingCitas.length === 0 ? (
+                                <p className="text-[9px] text-military-600 italic px-2">No hay citas próximas en el radar</p>
+                            ) : (
+                                upcomingCitas.map(cita => (
+                                    <div key={`up-${cita.id}`} className="p-3 bg-military-900/50 rounded-xl border border-military-800/50 hover:border-gold-500/20 transition-all cursor-pointer" onClick={() => setSelectedDate(new Date(cita.fecha))}>
+                                        <div className="flex justify-between items-start gap-2">
+                                            <p className="text-[9px] font-black text-gold-500 uppercase">{new Date(cita.fecha).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })} • {cita.hora}</p>
+                                        </div>
+                                        <p className="text-[11px] font-bold text-white truncate mt-1">{cita.motivo}</p>
+                                        <p className="text-[9px] text-military-500 truncate">{cita.cliente ? `${cita.cliente.nombres} ${cita.cliente.apellidos}` : 'Sin cliente'}</p>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
 

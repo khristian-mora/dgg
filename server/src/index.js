@@ -79,7 +79,7 @@ ensureDirectories();
 
 // Iniciar cron jobs
 startReminderJob();
-initializeWhatsApp();
+// initializeWhatsApp(); // Desactivado por solicitud del usuario: usar solo Correo
 initializeBackupJob();
 
 const whatsappRoutes = require('./routes/whatsappRoutes');

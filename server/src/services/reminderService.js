@@ -14,7 +14,7 @@ const startReminderJob = () => {
         
         try {
             await recordatoriosCitas();
-            await recordatoriosCumpleanios();
+            // await recordatoriosCumpleanios(); // Removido por solicitud del usuario
             await recordatoriosVencimientoSalvoconducto();
             await recordatoriosCompraMunicion();
             await generarResumenDiarioAdmin();
@@ -49,7 +49,13 @@ async function recordatoriosCitas() {
         if (!cita.cliente) continue;
         console.log(`[CITA] Recordatorio para ${cita.cliente.nombres} - Fecha: ${cita.fecha}`);
         
-        // Simular notificación
+        // Enviar Email si el cliente tiene uno registrado
+        if (cita.cliente.email) {
+            const subject = 'Recordatorio de Cita - GestorArmas Pro';
+            const message = `Hola ${cita.cliente.nombres}, recuerda tu cita mañana a las ${cita.hora}. Motivo: ${cita.motivo}.`;
+            await sendEmail(cita.cliente.email, subject, message, { type: 'NOTIFICACION' });
+        }
+
         await prisma.notificacion.create({
             data: {
                 clienteId: cita.cliente.id,
@@ -57,7 +63,7 @@ async function recordatoriosCitas() {
                 asunto: 'Recordatorio de Cita',
                 mensaje: `Hola ${cita.cliente.nombres}, recuerda tu cita mañana a las ${cita.hora}. Motivo: ${cita.motivo}.`,
                 tipo: 'RECORDATORIO',
-                canal: 'WHATSAPP',
+                canal: 'EMAIL',
                 estado: 'ENVIADO'
             }
         });
@@ -69,54 +75,7 @@ async function recordatoriosCitas() {
     }
 }
 
-/**
- * 2. Recordatorio de Cumpleaños
- */
-async function recordatoriosCumpleanios() {
-    const today = new Date();
-    const currentMonth = today.getMonth() + 1; // 1-12
-    const currentDay = today.getDate();
-
-    // Nota: SQLite no tiene EXTRACT, así que filtramos en memoria o con query específica si fuera PostgreSQL
-    // Para simplificar en esta demo, buscaremos clientes con cumple hoy
-    const clientes = await prisma.cliente.findMany({
-        where: {
-            estado: 'ACTIVO'
-        }
-    });
-
-    const cumpraniosHoy = clientes.filter(c => {
-        if (!c.fechaNacimiento) return false;
-        const d = new Date(c.fechaNacimiento);
-        return d.getMonth() + 1 === currentMonth && d.getDate() === currentDay;
-    });
-
-    for (const cliente of cumpraniosHoy) {
-        console.log(`[CUMPLEAÑOS] Hoy cumple años ${cliente.nombres} ${cliente.apellidos}`);
-        
-        await prisma.notificacion.create({
-            data: {
-                clienteId: cliente.id,
-                asunto: '¡Feliz Cumpleaños!',
-                mensaje: `🎂 ¡Feliz cumpleaños, ${cliente.nombres}! 🎉 Que tengas un maravilloso día. De parte de Diana Gómez García.`,
-                tipo: 'CUMPLEANIOS',
-                canal: 'WHATSAPP',
-                estado: 'PENDIENTE'
-            }
-        });
-
-        // Crear tarea para que la admin salude personalmente si desea
-        await prisma.tarea.create({
-            data: {
-                titulo: `Saludar a ${cliente.nombres} por su cumpleaños`,
-                descripcion: `Hoy es el cumpleaños del cliente ${cliente.nombres} ${cliente.apellidos}.`,
-                fechaLimite: new Date(),
-                prioridad: 'BAJA',
-                tipo: 'AUTOMATICA'
-            }
-        });
-    }
-}
+// Función de cumpleaños eliminada por solicitud del usuario
 
 /**
  * 3. Recordatorio Vencimiento Salvoconducto (45 días antes)
@@ -143,13 +102,20 @@ async function recordatoriosVencimientoSalvoconducto() {
         if (!arma.cliente) continue;
         console.log(`[SC VENCIMIENTO] El salvoconducto de ${arma.cliente.nombres} vence en 45 días`);
 
+        const message = `⚠️ Aviso importante: Tu salvoconducto para el arma ${arma.marca} (${arma.numeroSerie}) vence el ${arma.fechaVencimientoSC.toLocaleDateString()}. Ya puedes iniciar el trámite de revalidación.`;
+        
+        // Enviar Email si el cliente lo tiene
+        if (arma.cliente.email) {
+            await sendEmail(arma.cliente.email, 'Aviso de Vencimiento de Salvoconducto', message, { type: 'NOTIFICACION' });
+        }
+
         await prisma.notificacion.create({
             data: {
                 clienteId: arma.cliente.id,
                 asunto: 'Vencimiento de Salvoconducto',
-                mensaje: `⚠️ Aviso importante: Tu salvoconducto para el arma ${arma.marca} (${arma.numeroSerie}) vence el ${arma.fechaVencimientoSC.toLocaleDateString()}. Ya puedes iniciar el trámite de revalidación.`,
+                mensaje: message,
                 tipo: 'VENCIMIENTO',
-                canal: 'WHATSAPP',
+                canal: 'EMAIL',
                 estado: 'ENVIADO'
             }
         });
@@ -196,14 +162,21 @@ async function recordatoriosCompraMunicion() {
         if (!tramite.cliente) continue;
         console.log(`[MUNICION] ${tramite.cliente.nombres} compró munición hace 6 meses`);
 
+        const message = `💬 Hola ${tramite.cliente.nombres}, ya han pasado 6 meses desde tu última compra de munición. ¡Ya puedes realizar este trámite nuevamente!`;
+        
+        // Enviar Email si el cliente lo tiene
+        if (tramite.cliente.email) {
+            await sendEmail(tramite.cliente.email, 'Disponibilidad de Compra de Munición', message, { type: 'NOTIFICACION' });
+        }
+
         await prisma.notificacion.create({
             data: {
                 clienteId: tramite.cliente.id,
                 asunto: 'Compra de Munición disponible',
-                mensaje: `💬 Hola ${tramite.cliente.nombres}, ya han pasado 6 meses desde tu última compra de munición. ¡Ya puedes realizar este trámite nuevamente!`,
+                mensaje: message,
                 tipo: 'RECORDATORIO',
-                canal: 'WHATSAPP',
-                estado: 'PENDIENTE'
+                canal: 'EMAIL',
+                estado: 'ENVIADO'
             }
         });
     }
@@ -219,24 +192,7 @@ async function generarResumenDiarioAdmin() {
     console.log('[SUMMARY] Generando resumen matutino para SUPER_ADMIN...');
     
     try {
-        // --- NUEVO: Intentar enviar notificaciones PENDIENTES vía Bot ---
-        console.log('[WA-BOT] Intentando enviar notificaciones automáticas...');
-        const pendingNotifs = await prisma.notificacion.findMany({
-            where: { estado: 'PENDIENTE', canal: 'WHATSAPP' },
-            include: { cliente: true }
-        });
-
-        for (const notif of pendingNotifs) {
-            if (notif.cliente?.telefono) {
-                const success = await sendAutomatedMessage(notif.cliente.telefono, notif.mensaje);
-                if (success) {
-                    await prisma.notificacion.update({
-                        where: { id: notif.id },
-                        data: { estado: 'ENVIADO' }
-                    });
-                }
-            }
-        }
+        // --- WhatsApp Desactivado: No se procesan notificaciones PENDIENTES de WhatsApp ---
         const pendingTasks = await prisma.tarea.count({ where: { estado: 'PENDIENTE' } });
         const urgentTasks = await prisma.tarea.count({ where: { prioridad: 'URGENTE', estado: 'PENDIENTE' } });
         const todayAppointments = await prisma.cita.count({ 
@@ -270,7 +226,7 @@ async function generarResumenDiarioAdmin() {
                 </div>
             `;
 
-            await sendEmail(adminUser.email, subject, text, html);
+            await sendEmail(adminUser.email, subject, text, { html, type: 'DEFAULT' });
         }
 
         console.log(`--- Resumen enviado correctamente ---`);
