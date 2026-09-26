@@ -1,9 +1,9 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 export const getResourceUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    const base = API_URL.replace('/api', '');
+    const base = API_URL.replace(/\/api$/, '');
     return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
 };
 
