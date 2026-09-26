@@ -24,10 +24,10 @@ const getDashboardStats = async (req, res) => {
     }
 
     res.json({
-      tramitesActivos: totalClientes, // Using totalClientes as proxy for now
+      tramitesActivos: await prisma.tramite.count({ where: { estado: 'EN_PROCESO' } }),
       urgentes: tramitesUrgentes,
       citasHoy,
-      ingresos: totalIngresos ? `$${totalIngresos.toLocaleString()}` : "$0"
+      ingresos: totalIngresos ? '$' + totalIngresos.toLocaleString() : ''
     });
   } catch (err) {
     res.status(500).json({ message: 'Error al obtener estadísticas', error: err.message });

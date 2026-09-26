@@ -1,0 +1,339 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./prod.db"
+}
+
+model User {
+  id              String     @id @default(cuid())
+  nombre          String
+  email           String     @unique
+  passwordHash    String
+  rol             String     @default("GESTION")
+  isActive        Boolean    @default(true)
+  lastLogin       DateTime?
+  clienteId       String?    @unique
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  auditLogs       AuditLog[]
+  tareasCreadas   Tarea[]    @relation("CreatedTasks")
+  tareasAsignadas Tarea[]    @relation("UserTasks")
+  cliente         Cliente?   @relation(fields: [clienteId], references: [id])
+}
+
+model Cliente {
+  id                String         @id @default(cuid())
+  foto              String?
+  nombres           String
+  apellidos         String
+  cedula            String         @unique
+  telefono          String
+  celular           String?
+  correoElectronico String?
+  ocupacion         String?
+  direccion         String?
+  ciudad            String?
+  fechaNacimiento   DateTime?
+  contrasenaDCCAE   String?
+  correoDCCAE       String?
+  estado            String         @default("ACTIVO")
+  tipoCliente       String         @default("CLIENTE")
+  prospectoInteres  String?
+  observaciones     String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  barrio            String?
+  departamento      String?
+  estadoCivil       String?
+  fechaExpedicionCC DateTime?
+  lugarExpedicionCC String?
+  nivelAcademico    String?
+  sexo              String?        @default("MASCULINO")
+  nacionalidad      String?        @default("COLOMBIANA")
+  armas             Arma[]
+  caja              Caja[]
+  citas             Cita[]
+  documentos        Documento[]
+  notificaciones    Notificacion[]
+  pagos             Pago[]
+  tareas            Tarea[]
+  tramites          Tramite[]
+  user              User?
+}
+
+model Arma {
+  id                      String      @id @default(cuid())
+  clienteId               String
+  claseArma               String
+  marca                   String?
+  modelo                  String?
+  calibre                 String?
+  numeroSerie             String?     @unique
+  capacidad               Int?
+  longitudCanon           String?
+  paisOrigen              String?
+  tipoPermiso             String?
+  descripcion             String?
+  fechaVencimientoSC      DateTime?
+  disponibleParaCesion    Boolean     @default(false)
+  precioCesion            Float?
+  especificacionesEntrega String?
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+  foto1                   String?
+  foto2                   String?
+  foto3                   String?
+  foto4                   String?
+  fotoImprontas           String?
+  cliente                 Cliente     @relation(fields: [clienteId], references: [id])
+  documentos              Documento[]
+  tramites                Tramite[]
+}
+
+model Documento {
+  id            String   @id @default(cuid())
+  clienteId     String?
+  armaId        String?
+  tramiteId     String?
+  tipo          String
+  titulo        String?
+  nombreArchivo String?
+  mimetype      String?
+  extension     String?
+  url           String
+  size          Int?
+  estado        String   @default("PENDIENTE")
+  verificado    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  tramite       Tramite? @relation(fields: [tramiteId], references: [id])
+  arma          Arma?    @relation(fields: [armaId], references: [id])
+  cliente       Cliente? @relation(fields: [clienteId], references: [id])
+}
+
+model Tramite {
+  id             String         @id @default(cuid())
+  clienteId      String
+  armaId         String?
+  tipo           String
+  estado         String         @default("INICIADO")
+  fechaInicio    DateTime       @default(now())
+  fechaFin       DateTime?
+  valorAcuerdo   Float?
+  abonoTotal     Float          @default(0)
+  saldoPendiente Float?
+  pazYSalvo      Boolean        @default(false)
+  esUrgente      Boolean        @default(false)
+  ultimaAccion   String?
+  observaciones  String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  citas          Cita[]
+  documentos     Documento[]
+  notificaciones Notificacion[]
+  pagos          Pago[]
+  pasos          PasoTramite[]
+  tareas         Tarea[]
+  arma           Arma?          @relation(fields: [armaId], references: [id])
+  cliente        Cliente        @relation(fields: [clienteId], references: [id])
+
+  @@index([estado])
+  @@index([clienteId])
+}
+
+model Notificacion {
+  id         String   @id @default(cuid())
+  clienteId  String?
+  tramiteId  String?
+  asunto     String?
+  mensaje    String
+  tipo       String?
+  canal      String?
+  estado     String   @default("PENDIENTE")
+  errorMsg   String?
+  fechaEnvio DateTime @default(now())
+  tramite    Tramite? @relation(fields: [tramiteId], references: [id])
+  cliente    Cliente? @relation(fields: [clienteId], references: [id])
+}
+
+model Cita {
+  id                  String   @id @default(cuid())
+  motivo              String
+  descripcion         String?
+  fecha               DateTime
+  hora                String?
+  lugar               String?
+  prioridad           String   @default("NORMAL")
+  estado              String   @default("PENDIENTE")
+  tipo                String?
+  clienteId           String?
+  tramiteId           String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  recordatorio2dias   Boolean  @default(true)
+  recordatorio1dia    Boolean  @default(true)
+  recordatorioEnviado Boolean  @default(false)
+  tramite             Tramite? @relation(fields: [tramiteId], references: [id])
+  cliente             Cliente? @relation(fields: [clienteId], references: [id])
+
+  @@index([fecha])
+  @@index([estado])
+}
+
+model Consulta {
+  id           String    @id @default(cuid())
+  pregunta     String
+  respuesta    String?
+  observacion  String?
+  fecha        DateTime  @default(now())
+  respondidaEn DateTime?
+  isRespondida Boolean   @default(false)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  accion    String
+  detalle   String?
+  modulo    String?
+  ip        String?
+  userAgent String?
+  fecha     DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model Tarea {
+  id            String   @id @default(cuid())
+  titulo        String
+  descripcion   String?
+  fechaLimite   DateTime
+  prioridad     String   @default("NORMAL")
+  estado        String   @default("PENDIENTE")
+  tipo          String   @default("MANUAL")
+  asignadoAId   String?
+  asignadoPorId String?
+  clienteId     String?
+  tramiteId     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tramite       Tramite? @relation(fields: [tramiteId], references: [id])
+  cliente       Cliente? @relation(fields: [clienteId], references: [id])
+  asignadoPor   User?    @relation("CreatedTasks", fields: [asignadoPorId], references: [id])
+  asignadoA     User?    @relation("UserTasks", fields: [asignadoAId], references: [id])
+}
+
+model PasoTramite {
+  id           String   @id @default(cuid())
+  tramiteId    String
+  descripcion  String
+  adjunto      String?
+  realizadoPor String?
+  fechaAccion  DateTime @default(now())
+  tramite      Tramite  @relation(fields: [tramiteId], references: [id])
+}
+
+model Pago {
+  id          String   @id @default(cuid())
+  tramiteId   String
+  tipo        String
+  concepto    String?
+  valor       Float
+  fecha       DateTime @default(now())
+  comprobante String?
+  metodoPago  String?
+  clienteId   String?
+  cliente     Cliente? @relation(fields: [clienteId], references: [id])
+  tramite     Tramite  @relation(fields: [tramiteId], references: [id])
+}
+
+model Caja {
+  id          String   @id @default(cuid())
+  tipo        String
+  concepto    String
+  valor       Float
+  categoria   String?
+  referencia  String?
+  fecha       DateTime @default(now())
+  notas       String?
+  comprobante String?
+  metodoPago  String?
+  clienteId   String?
+  cliente     Cliente? @relation(fields: [clienteId], references: [id])
+
+  @@index([fecha])
+}
+
+model Configuracion {
+  id          String   @id @default(cuid())
+  clave       String   @unique
+  valor       String
+  descripcion String?
+  updatedAt   DateTime @updatedAt
+}
+
+model Formato {
+  id          String   @id @default(cuid())
+  nombre      String
+  tipo        String
+  descripcion String?
+  contenido   String?
+  urlArchivo  String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CatalogoArma {
+  id          String   @id @default(cuid())
+  clase       String
+  marca       String
+  modelo      String?
+  calibre     String
+  descripcion String?
+  fotos       String?
+  precio      Float?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Contacto {
+  id        String   @id @default(cuid())
+  nombre    String
+  cargo     String?
+  entidad   String?
+  telefono  String?
+  celular   String?
+  email     String?
+  notas     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model DocumentoImportante {
+  id          String    @id @default(cuid())
+  titulo      String
+  tipo        String
+  url         String
+  fecha       DateTime?
+  descripcion String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+}
+
+model Multimedia {
+  id          String   @id @default(cuid())
+  titulo      String
+  tipo        String
+  url         String
+  descripcion String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+enum Rol {
+  SUPER_ADMIN
+  GESTION
+  CLIENTE
+}

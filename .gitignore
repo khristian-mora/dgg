@@ -10,3 +10,11 @@ tmp_docx/
 uploads/
 /client/node_modules/
 /server/node_modules/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.db.gz
+server/uploads/
+produccion.md
+
