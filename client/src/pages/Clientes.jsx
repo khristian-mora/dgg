@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Search, Filter, MoreVertical, Phone, Mail, Award, ArrowUpRight, Loader2, Trash2, LayoutGrid, List } from 'lucide-react'
+import { Plus, Search, Filter, MoreVertical, Phone, Mail, Award, ArrowUpRight, Loader2, Trash2, LayoutGrid, List, UserCheck, Users, UserX, Target } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api/api'
@@ -14,6 +14,7 @@ const Clientes = () => {
     const [showModal, setShowModal] = useState(false);
     const [activeMenu, setActiveMenu] = useState(null);
     const [viewType, setViewType] = useState('grid'); // 'grid' or 'list'
+    const [statusFilter, setStatusFilter] = useState('activos'); // 'activos' | 'todos' | 'prospectos' | 'inactivos'
     const [formData, setFormData] = useState({
         nombres: '',
         apellidos: '',
@@ -73,15 +74,35 @@ const Clientes = () => {
         }
     };
 
-    const filteredClientes = clientes.filter(c => 
-        c.nombres?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.apellidos?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.cedula?.includes(searchTerm) ||
-        c.telefono?.includes(searchTerm)
-    );
+    // Conteos rápidos para las pestañas
+    const countActivos = clientes.filter(c => (c.estado === 'ACTIVO' || !c.estado) && c.tipoCliente !== 'PROSPECTO' && c.tipo !== 'PROSPECTO').length;
+    const countTodos = clientes.length;
+    const countProspectos = clientes.filter(c => c.tipoCliente === 'PROSPECTO' || c.tipo === 'PROSPECTO').length;
+    const countInactivos = clientes.filter(c => c.estado === 'INACTIVO').length;
+
+    const filteredClientes = clientes.filter(c => {
+        const matchesSearch = 
+            c.nombres?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.apellidos?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.cedula?.includes(searchTerm) ||
+            c.telefono?.includes(searchTerm) ||
+            c.ciudad?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        if (!matchesSearch) return false;
+
+        const isProspecto = c.tipoCliente === 'PROSPECTO' || c.tipo === 'PROSPECTO';
+        const isActivo = (c.estado === 'ACTIVO' || !c.estado) && !isProspecto;
+        const isInactivo = c.estado === 'INACTIVO';
+
+        if (statusFilter === 'activos') return isActivo;
+        if (statusFilter === 'prospectos') return isProspecto;
+        if (statusFilter === 'inactivos') return isInactivo;
+        return true; // 'todos'
+    });
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                    <p className="text-gold-500 text-xs font-bold uppercase tracking-[0.3em] mb-2">Directorio de Confianza</p>
@@ -97,12 +118,84 @@ const Clientes = () => {
                 </button>
             </div>
 
+            {/* Pestañas de Segmentación de Clientes */}
+            <div className="flex flex-wrap gap-3 p-1.5 glass rounded-2xl border border-military-100/10">
+                <button
+                    onClick={() => setStatusFilter('activos')}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-xs transition-all ${
+                        statusFilter === 'activos'
+                            ? 'bg-gold-gradient text-military-950 shadow-md font-black'
+                            : 'text-military-400 hover:text-military-100 hover:bg-military-900/50'
+                    }`}
+                >
+                    <UserCheck size={16} />
+                    <span>CLIENTES ACTIVOS</span>
+                    <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        statusFilter === 'activos' ? 'bg-military-950/20 text-military-950' : 'bg-military-800 text-military-300'
+                    }`}>
+                        {countActivos}
+                    </span>
+                </button>
+
+                <button
+                    onClick={() => setStatusFilter('todos')}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-xs transition-all ${
+                        statusFilter === 'todos'
+                            ? 'bg-gold-gradient text-military-950 shadow-md font-black'
+                            : 'text-military-400 hover:text-military-100 hover:bg-military-900/50'
+                    }`}
+                >
+                    <Users size={16} />
+                    <span>TODOS LOS REGISTROS</span>
+                    <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        statusFilter === 'todos' ? 'bg-military-950/20 text-military-950' : 'bg-military-800 text-military-300'
+                    }`}>
+                        {countTodos}
+                    </span>
+                </button>
+
+                <button
+                    onClick={() => setStatusFilter('prospectos')}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-xs transition-all ${
+                        statusFilter === 'prospectos'
+                            ? 'bg-gold-gradient text-military-950 shadow-md font-black'
+                            : 'text-military-400 hover:text-military-100 hover:bg-military-900/50'
+                    }`}
+                >
+                    <Target size={16} />
+                    <span>PROSPECTOS WEB</span>
+                    <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        statusFilter === 'prospectos' ? 'bg-military-950/20 text-military-950' : 'bg-amber-500/20 text-amber-400'
+                    }`}>
+                        {countProspectos}
+                    </span>
+                </button>
+
+                <button
+                    onClick={() => setStatusFilter('inactivos')}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-xs transition-all ${
+                        statusFilter === 'inactivos'
+                            ? 'bg-gold-gradient text-military-950 shadow-md font-black'
+                            : 'text-military-400 hover:text-military-100 hover:bg-military-900/50'
+                    }`}
+                >
+                    <UserX size={16} />
+                    <span>INACTIVOS / ARCHIVADOS</span>
+                    <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        statusFilter === 'inactivos' ? 'bg-military-950/20 text-military-950' : 'bg-military-800 text-military-300'
+                    }`}>
+                        {countInactivos}
+                    </span>
+                </button>
+            </div>
+
+            {/* Barra de Búsqueda y Switch de Vista */}
             <div className="glass p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center">
                 <div className="relative flex-1 w-full group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-military-500 group-focus-within:text-gold-500 transition-colors" size={18} />
                     <input 
                         type="text" 
-                        placeholder="Buscar por nombre, cédula o teléfono..." 
+                        placeholder={`Buscar en ${statusFilter === 'activos' ? 'clientes activos' : statusFilter === 'prospectos' ? 'prospectos' : statusFilter === 'inactivos' ? 'inactivos' : 'todos'} por nombre, cédula o teléfono...`} 
                         className="w-full pl-12 pr-4 py-3 bg-military-950/40 border border-military-800 rounded-2xl focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50 text-sm transition-all"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -125,13 +218,6 @@ const Clientes = () => {
                             <List size={20} />
                         </button>
                     </div>
-                    <button 
-                        onClick={() => toast.success('Abriendo panel de filtros...')}
-                        className="flex-1 md:flex-none flex items-center justify-center space-x-2 px-4 py-3 bg-military-900 border border-military-800 text-military-400 rounded-2xl hover:text-military-100 transition-all"
-                    >
-                        <Filter size={18} />
-                        <span className="text-sm font-bold">Filtros</span>
-                    </button>
                 </div>
             </div>
 
@@ -140,8 +226,13 @@ const Clientes = () => {
                     <Loader2 className="w-8 h-8 text-gold-500 animate-spin" />
                 </div>
             ) : filteredClientes.length === 0 ? (
-                <div className="text-center py-20">
-                    <p className="text-military-500">No hay clientes registrados</p>
+                <div className="text-center py-20 glass rounded-3xl p-10">
+                    <p className="text-military-500 font-bold text-sm">
+                        {statusFilter === 'activos' && 'No hay clientes activos registrados'}
+                        {statusFilter === 'prospectos' && 'No hay prospectos web pendientes'}
+                        {statusFilter === 'inactivos' && 'No hay clientes inactivos o archivados'}
+                        {statusFilter === 'todos' && 'No hay registros en el directorio'}
+                    </p>
                 </div>
             ) : viewType === 'grid' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
