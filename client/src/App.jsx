@@ -217,10 +217,30 @@ const Dashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <StatsCard label="Trámites Activos" value={stats?.tramitesActivos || "0"} trend="+12%" color="gold" />
-                <StatsCard label="Urgentes" value={stats?.urgentes || "0"} trend="DCCAE" color="red" />
-                <StatsCard label="Citas Hoy" value={citasHoy.length.toString()} trend={citasHoy[0]?.hora || "--"} color="blue" />
-                <StatsCard label="Ingresos" value={stats?.ingresos || "$0"} trend="+8.2%" color="green" />
+                <StatsCard 
+                    label="Trámites Activos" 
+                    value={stats?.tramitesActivos?.toString() || "0"} 
+                    trend="En proceso" 
+                    color="gold" 
+                />
+                <StatsCard 
+                    label="Citas para Hoy" 
+                    value={citasHoy.length.toString()} 
+                    trend={citasHoy.length > 0 ? (citasHoy[0]?.hora || "Programadas") : "Al día"} 
+                    color="blue" 
+                />
+                <StatsCard 
+                    label={`Recaudo (${stats?.nombreMes ? stats.nombreMes.charAt(0).toUpperCase() + stats.nombreMes.slice(1) : 'Mes'})`} 
+                    value={stats?.recaudoMes ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(stats.recaudoMes) : "$0"} 
+                    trend="Cobrado este mes" 
+                    color="green" 
+                />
+                <StatsCard 
+                    label="Cartera por Cobrar" 
+                    value={stats?.carteraPendiente ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(stats.carteraPendiente) : "$0"} 
+                    trend="Saldos pendientes" 
+                    color="red" 
+                />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
