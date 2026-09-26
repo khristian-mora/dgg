@@ -69,15 +69,23 @@ const createPago = async (req, res) => {
             console.error('[PAGOS ERROR] Fallo al registrar en caja general (No crítico):', cajaErr);
         }
 
-        // 4. SECUNDARIO: Notificación de Pago al Cliente
+        // 4. SECUNDARIO: Notificación de Pago al Cliente (Controlado por Configuración)
         if (tramite.cliente.correoElectronico) {
             try {
-                const subject = `Recibo de Pago: Abono a Trámite ${tramite.tipo}`;
-                const text = `Hola ${tramite.cliente.nombres}, hemos registrado tu abono de ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(monto)}. 
-                Concepto: ${concepto || 'Abono general'}. 
-                Nuevo Saldo Pendiente: ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(saldoPendiente)}.`;
-                
-                await sendEmail(tramite.cliente.correoElectronico, subject, text, { type: 'PAGO' });
+                const configPago = await prisma.configuracion.findUnique({ where: { clave: 'EMAIL_PAGOS_ENABLED' } });
+                const pagosEmailEnabled = configPago?.valor === 'true' || configPago?.valor === '1';
+
+                if (pagosEmailEnabled) {
+                    const subject = `Recibo de Pago: Abono a Trámite ${tramite.tipo}`;
+                    const text = `Hola ${tramite.cliente.nombres}, hemos registrado tu abono de ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(monto)}. 
+                    Concepto: ${concepto || 'Abono general'}. 
+                    Nuevo Saldo Pendiente: ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(saldoPendiente)}.`;
+                    
+                    await sendEmail(tramite.cliente.correoElectronico, subject, text, { type: 'PAGO' });
+                    console.log(`[PAGOS] Recibo de pago enviado por correo a ${tramite.cliente.correoElectronico}`);
+                } else {
+                    console.log(`[PAGOS] Envío de recibo por correo desactivado por configuración (EMAIL_PAGOS_ENABLED = false)`);
+                }
             } catch (notifyErr) {
                 console.error('[PAGOS ERROR] Fallo al enviar notificación de pago:', notifyErr);
             }

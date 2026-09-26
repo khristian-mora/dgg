@@ -1,12 +1,63 @@
-import React, { useState } from 'react';
-import { Settings, Shield, DollarSign, Database, Save, User as UserIcon, Bell, Lock, Download, CloudLightning } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, Shield, DollarSign, Database, Save, User as UserIcon, Bell, Lock, Download, CloudLightning, Mail, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { api } from '../api/api';
 import toast from 'react-hot-toast';
 
 const Configuracion = () => {
-    const [activeTab, setActiveTab] = useState('precios');
+    const [activeTab, setActiveTab] = useState('notificaciones');
     const user = JSON.parse(localStorage.getItem('user'));
     const isSuperAdmin = user?.rol === 'SUPER_ADMIN';
+
+    // Email notification settings
+    const [emailSettings, setEmailSettings] = useState({
+        EMAIL_PAGOS_ENABLED: false,
+        EMAIL_CITAS_ENABLED: false,
+        EMAIL_VENCIMIENTO_ENABLED: false,
+        EMAIL_MUNICION_ENABLED: false,
+        EMAIL_RESUMEN_ADMIN_ENABLED: false
+    });
+    const [loadingConfigs, setLoadingConfigs] = useState(false);
+
+    useEffect(() => {
+        loadConfigs();
+    }, []);
+
+    const loadConfigs = async () => {
+        try {
+            setLoadingConfigs(true);
+            const configs = await api.config.getAll();
+            if (Array.isArray(configs)) {
+                const settingsMap = { ...emailSettings };
+                configs.forEach(c => {
+                    if (c.clave in settingsMap) {
+                        settingsMap[c.clave] = c.valor === 'true' || c.valor === '1';
+                    }
+                });
+                setEmailSettings(settingsMap);
+            }
+        } catch (err) {
+            console.error('Error al cargar configuraciones:', err);
+        } finally {
+            setLoadingConfigs(false);
+        }
+    };
+
+    const toggleEmailSetting = async (key, description) => {
+        const newValue = !emailSettings[key];
+        setEmailSettings(prev => ({ ...prev, [key]: newValue }));
+
+        try {
+            await api.config.upsert({
+                clave: key,
+                valor: newValue ? 'true' : 'false',
+                descripcion: description
+            });
+            toast.success(`${description}: ${newValue ? 'ACTIVADO' : 'DESACTIVADO'}`);
+        } catch (err) {
+            setEmailSettings(prev => ({ ...prev, [key]: !newValue }));
+            toast.error(err.message || 'Error al guardar la configuración');
+        }
+    };
 
     const [securitySettings, setSecuritySettings] = useState({
         twoFactor: true,
@@ -34,6 +85,7 @@ const Configuracion = () => {
                 
                 {/* Tabs Sidebar */}
                 <div className="lg:col-span-1 space-y-2">
+                    <ConfigTab active={activeTab === 'notificaciones'} onClick={() => setActiveTab('notificaciones')} icon={<Mail size={18}/>} label="Notificaciones & Correos" />
                     <ConfigTab active={activeTab === 'precios'} onClick={() => setActiveTab('precios')} icon={<DollarSign size={18}/>} label="Tasas y Precios" />
                     <ConfigTab active={activeTab === 'catalogos'} onClick={() => setActiveTab('catalogos')} icon={<Database size={18}/>} label="Catálogos DCCAE" />
                     <ConfigTab active={activeTab === 'perfil'} onClick={() => setActiveTab('perfil')} icon={<UserIcon size={18}/>} label="Mi Perfil" />
@@ -47,6 +99,63 @@ const Configuracion = () => {
                 <div className="lg:col-span-3">
                     <div className="glass p-10 rounded-[2.5rem] border border-military-100/10 min-h-[500px]">
                         
+                        {activeTab === 'notificaciones' && (
+                            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <div className="border-b border-military-800 pb-4 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-xl font-black text-white uppercase tracking-tighter">Control de Envíos Automáticos de Correo</h3>
+                                        <p className="text-xs text-military-400 mt-1">Activa o desactiva las notificaciones automáticas para evitar saturar a los clientes.</p>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-gold-500/10 text-gold-500 border border-gold-500/20">
+                                        Modo Anti-Spam Activo
+                                    </span>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <SecurityToggle 
+                                        label="Recibos de Pago por Correo" 
+                                        active={emailSettings.EMAIL_PAGOS_ENABLED} 
+                                        onClick={() => toggleEmailSetting('EMAIL_PAGOS_ENABLED', 'Recibos de pago por correo')} 
+                                        description="Envía un comprobante digital al correo del cliente cada vez que se registra un abono." 
+                                    />
+                                    <SecurityToggle 
+                                        label="Recordatorios de Citas (1 Día Antes)" 
+                                        active={emailSettings.EMAIL_CITAS_ENABLED} 
+                                        onClick={() => toggleEmailSetting('EMAIL_CITAS_ENABLED', 'Recordatorio de citas por correo')} 
+                                        description="Envía un correo automático al cliente recordándole su cita al día siguiente (la tarea interna en CRM siempre se crea)." 
+                                    />
+                                    <SecurityToggle 
+                                        label="Avisos de Vencimiento de Salvoconducto (60/30/15 Días)" 
+                                        active={emailSettings.EMAIL_VENCIMIENTO_ENABLED} 
+                                        onClick={() => toggleEmailSetting('EMAIL_VENCIMIENTO_ENABLED', 'Avisos de vencimiento por correo')} 
+                                        description="Envía correos automáticos al cliente alertando sobre el vencimiento próximo de su permiso de porte/tenencia." 
+                                    />
+                                    <SecurityToggle 
+                                        label="Recordatorios de Compra de Munición (Semestral)" 
+                                        active={emailSettings.EMAIL_MUNICION_ENABLED} 
+                                        onClick={() => toggleEmailSetting('EMAIL_MUNICION_ENABLED', 'Recordatorios de munición por correo')} 
+                                        description="Envía correos sugiriendo la compra del cupo de munición semestral autorizado." 
+                                    />
+                                    <SecurityToggle 
+                                        label="Resumen Diario al Administrador" 
+                                        active={emailSettings.EMAIL_RESUMEN_ADMIN_ENABLED} 
+                                        onClick={() => toggleEmailSetting('EMAIL_RESUMEN_ADMIN_ENABLED', 'Resumen diario al administrador por correo')} 
+                                        description="Envía un informe diario consolidado a la gerencia a las 08:00 AM con citas, vencimientos y tareas del día." 
+                                    />
+                                </div>
+
+                                <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-4">
+                                    <CheckCircle2 className="text-emerald-500 shrink-0 mt-0.5" size={20} />
+                                    <div>
+                                        <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Control Total y Tareas Internas Protegidas</p>
+                                        <p className="text-xs text-military-300 mt-1 leading-relaxed">
+                                            Aunque desactives los correos masivos a clientes, el sistema seguirá generando automáticamente las tareas y alertas en el panel interno del administrador para que nunca se pierda un seguimiento.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === 'precios' && (
                             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <h3 className="text-xl font-black text-white uppercase tracking-tighter border-b border-military-800 pb-4">Gestión de Tasas Operativas (Indumil/DCCAE)</h3>
