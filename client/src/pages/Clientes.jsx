@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Search, Filter, MoreVertical, Phone, Mail, Award, ArrowUpRight, Loader2, Trash2, LayoutGrid, List, UserCheck, Users, UserX, Target } from 'lucide-react'
+import { Plus, Search, Filter, MoreVertical, Phone, Mail, Award, ArrowUpRight, Loader2, Trash2, LayoutGrid, List, UserCheck, Users, UserX, Target, CheckCircle2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api/api'
@@ -74,6 +74,38 @@ const Clientes = () => {
         }
     };
 
+    const handleToggleEstado = async (cliente, e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        const isCurrentlyActivo = cliente.estado === 'ACTIVO';
+        const nuevoEstado = isCurrentlyActivo ? 'INACTIVO' : 'ACTIVO';
+        
+        try {
+            await api.clientes.setEstado(cliente.id, nuevoEstado);
+            toast.success(nuevoEstado === 'ACTIVO' ? `¡Cliente ${cliente.nombres} activado!` : `Cliente ${cliente.nombres} movido a inactivos`);
+            setClientes(prev => prev.map(c => c.id === cliente.id ? { ...c, estado: nuevoEstado } : c));
+            if (activeMenu) setActiveMenu(null);
+        } catch (err) {
+            toast.error('Error al actualizar estado del cliente');
+        }
+    };
+
+    const handleMarcarTodosInactivos = async () => {
+        const confirmed = window.confirm('¿Deseas mover TODOS los clientes activos a estado INACTIVO para hacer una revisión y activarlos uno por uno?');
+        if (!confirmed) return;
+        try {
+            toast.loading('Moviendo clientes a Inactivos...', { id: 'depurar' });
+            const res = await api.clientes.marcarTodosInactivos();
+            toast.success(res.message || 'Clientes actualizados', { id: 'depurar' });
+            fetchClientes();
+            setStatusFilter('inactivos');
+        } catch (err) {
+            toast.error('Error al actualizar clientes', { id: 'depurar' });
+        }
+    };
+
     // Conteos rápidos para las pestañas
     const countActivos = clientes.filter(c => (c.estado === 'ACTIVO' || !c.estado) && c.tipoCliente !== 'PROSPECTO' && c.tipo !== 'PROSPECTO').length;
     const countTodos = clientes.length;
@@ -109,13 +141,25 @@ const Clientes = () => {
                    <h1 className="text-4xl font-black text-white tracking-tight">Gestión de Clientes</h1>
                 </div>
                 
-                <button 
-                    onClick={() => setShowModal(true)}
-                    className="flex items-center justify-center space-x-2 px-6 py-4 bg-gold-gradient text-military-950 font-bold rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all"
-                >
-                    <Plus size={20} />
-                    <span>NUEVO CLIENTE</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    {isSuperAdmin && (
+                        <button 
+                            onClick={handleMarcarTodosInactivos}
+                            className="flex items-center justify-center space-x-2 px-4 py-4 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 hover:border-rose-200 font-bold text-xs rounded-2xl shadow-xs transition-all"
+                            title="Mover todos los clientes a Inactivos para depuración manual"
+                        >
+                            <UserX size={16} />
+                            <span>DEJAR TODOS EN INACTIVOS</span>
+                        </button>
+                    )}
+                    <button 
+                        onClick={() => setShowModal(true)}
+                        className="flex items-center justify-center space-x-2 px-6 py-4 bg-gold-gradient text-military-950 font-bold rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all"
+                    >
+                        <Plus size={20} />
+                        <span>NUEVO CLIENTE</span>
+                    </button>
+                </div>
             </div>
 
             {/* Pestañas de Segmentación de Clientes */}
@@ -351,9 +395,29 @@ const Clientes = () => {
                             </div>
 
                             <div className="flex items-center justify-between pt-6 border-t border-military-100/10">
-                                <div className={`flex items-center space-x-2 text-[10px] font-bold uppercase tracking-wider ${c.estado === 'ACTIVO' ? 'text-green-500' : 'text-military-500'}`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${c.estado === 'ACTIVO' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-military-500'}`} />
-                                    <span>{c.estado || 'ACTIVO'}</span>
+                                <div className="flex items-center gap-2">
+                                    <div className={`flex items-center space-x-1.5 text-[10px] font-bold uppercase tracking-wider ${c.estado === 'ACTIVO' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                        <div className={`w-2 h-2 rounded-full ${c.estado === 'ACTIVO' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`} />
+                                        <span>{c.estado || 'ACTIVO'}</span>
+                                    </div>
+                                    {c.estado === 'INACTIVO' ? (
+                                        <button 
+                                            onClick={(e) => handleToggleEstado(c, e)}
+                                            className="px-2.5 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1 shadow-xs hover:scale-105 cursor-pointer"
+                                            title="Pasar a Cliente Activo"
+                                        >
+                                            <CheckCircle2 size={12} />
+                                            <span>ACTIVAR</span>
+                                        </button>
+                                    ) : (
+                                        <button 
+                                            onClick={(e) => handleToggleEstado(c, e)}
+                                            className="px-2 py-0.5 rounded text-[9px] font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                                            title="Mover a Inactivos"
+                                        >
+                                            Desactivar
+                                        </button>
+                                    )}
                                 </div>
                                 
                                 <div className="flex gap-2">
@@ -436,6 +500,24 @@ const Clientes = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end space-x-2">
+                                                {c.estado === 'INACTIVO' ? (
+                                                    <button 
+                                                        onClick={(e) => handleToggleEstado(c, e)}
+                                                        className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1 shadow-xs hover:scale-105 cursor-pointer"
+                                                        title="Pasar a Cliente Activo"
+                                                    >
+                                                        <CheckCircle2 size={13} />
+                                                        <span>ACTIVAR</span>
+                                                    </button>
+                                                ) : (
+                                                    <button 
+                                                        onClick={(e) => handleToggleEstado(c, e)}
+                                                        className="px-2.5 py-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-[11px] font-semibold transition-all cursor-pointer"
+                                                        title="Mover a Inactivos"
+                                                    >
+                                                        Desactivar
+                                                    </button>
+                                                )}
                                                 <button 
                                                     onClick={() => navigate(`/clientes/${c.id}`)}
                                                     className="p-2 text-military-400 hover:text-gold-500 hover:bg-gold-500/10 rounded-lg transition-all"

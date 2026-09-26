@@ -1,6 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { getClientes, createCliente, getClienteById, updateCliente, uploadFoto, deleteCliente, hardDeleteCliente, activarPortal } = require('../controllers/clienteController');
+const { 
+    getClientes, 
+    createCliente, 
+    getClienteById, 
+    updateCliente, 
+    uploadFoto, 
+    deleteCliente, 
+    hardDeleteCliente, 
+    activarPortal,
+    setEstadoCliente,
+    marcarTodosInactivos
+} = require('../controllers/clienteController');
 const { verifyToken, checkRole, isAdmin } = require('../middlewares/authMiddleware');
 const upload = require('../config/multer');
 
@@ -12,6 +23,8 @@ router.get('/', verifyToken, checkRole(['SUPER_ADMIN', 'GESTION', 'EMPLEADO']), 
 router.get('/:id', verifyToken, getClienteById);
 router.post('/', verifyToken, checkRole(['SUPER_ADMIN', 'GESTION', 'EMPLEADO']), createCliente);
 router.put('/:id', verifyToken, checkRole(['SUPER_ADMIN', 'GESTION', 'EMPLEADO']), updateCliente);
+router.patch('/:id/estado', verifyToken, checkRole(['SUPER_ADMIN', 'GESTION', 'EMPLEADO']), setEstadoCliente);
+router.post('/marcar-todos-inactivos', verifyToken, checkRole(['SUPER_ADMIN']), marcarTodosInactivos);
 router.post('/:id/foto', verifyToken, checkRole(['SUPER_ADMIN', 'GESTION', 'EMPLEADO']), upload.single('foto'), uploadFoto);
 router.post('/:id/activar-portal', verifyToken, checkRole(['SUPER_ADMIN', 'GESTION']), activarPortal);
 router.delete('/:id', verifyToken, checkRole(['SUPER_ADMIN', 'GESTION']), deleteCliente);

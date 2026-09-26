@@ -134,6 +134,8 @@ export const api = {
         },
         delete: (id) => fetchWithAuth(`/clientes/${id}`, { method: 'DELETE' }),
         hardDelete: (id) => fetchWithAuth(`/clientes/${id}/permanent`, { method: 'DELETE' }),
+        setEstado: (id, estado) => fetchWithAuth(`/clientes/${id}/estado`, { method: 'PATCH', body: JSON.stringify({ estado }) }),
+        marcarTodosInactivos: () => fetchWithAuth('/clientes/marcar-todos-inactivos', { method: 'POST' }),
     },
     tramites: {
         getAll: (params) => fetchWithAuth(`/tramites?${new URLSearchParams(params)}`),

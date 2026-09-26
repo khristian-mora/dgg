@@ -213,6 +213,58 @@ const deleteCliente = async (req, res) => {
     }
 };
 
+const setEstadoCliente = async (req, res) => {
+    const { id } = req.params;
+    const { estado } = req.body;
+    try {
+        const cliente = await prisma.cliente.findUnique({ where: { id } });
+        if (!cliente) return res.status(404).json({ message: 'Cliente no encontrado' });
+
+        const nuevoEstado = estado || (cliente.estado === 'INACTIVO' ? 'ACTIVO' : 'INACTIVO');
+
+        const updated = await prisma.cliente.update({
+            where: { id },
+            data: { estado: nuevoEstado }
+        });
+
+        // Registro de Auditoría
+        await prisma.auditLog.create({
+            data: {
+                userId: req.user?.id,
+                accion: nuevoEstado === 'ACTIVO' ? 'ACTIVACIÓN' : 'DESACTIVACIÓN',
+                modulo: 'CLIENTES',
+                detalle: `Cambio de estado a ${nuevoEstado} del cliente: ${cliente.nombres} ${cliente.apellidos} (${cliente.cedula})`
+            }
+        });
+
+        res.json({ message: `Cliente marcado como ${nuevoEstado} con éxito`, cliente: updated });
+    } catch (err) {
+        res.status(400).json({ message: 'Error al cambiar estado', error: err.message });
+    }
+};
+
+const marcarTodosInactivos = async (req, res) => {
+    try {
+        const result = await prisma.cliente.updateMany({
+            where: { estado: 'ACTIVO' },
+            data: { estado: 'INACTIVO' }
+        });
+
+        await prisma.auditLog.create({
+            data: {
+                userId: req.user?.id,
+                accion: 'DEPURACION_MASIVA',
+                modulo: 'CLIENTES',
+                detalle: `Se pasaron ${result.count} clientes activos a estado INACTIVO para revisión manual.`
+            }
+        });
+
+        res.json({ message: `Se pasaron ${result.count} clientes a estado Inactivo`, count: result.count });
+    } catch (err) {
+        res.status(500).json({ message: 'Error al actualizar clientes', error: err.message });
+    }
+};
+
 const hardDeleteCliente = async (req, res) => {
     const { id } = req.params;
     try {
@@ -349,4 +401,15 @@ const activarPortal = async (req, res) => {
     }
 };
 
-module.exports = { getClientes, createCliente, getClienteById, updateCliente, uploadFoto, deleteCliente, hardDeleteCliente, activarPortal };
+module.exports = { 
+    getClientes, 
+    createCliente, 
+    getClienteById, 
+    updateCliente, 
+    uploadFoto, 
+    deleteCliente, 
+    hardDeleteCliente, 
+    activarPortal,
+    setEstadoCliente,
+    marcarTodosInactivos
+};
