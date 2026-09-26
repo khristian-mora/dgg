@@ -99,88 +99,88 @@ const NinjaSearch = () => {
 
     return (
         <div 
-            className="fixed inset-0 z-[1000] flex items-start justify-center pt-24 px-4 bg-military-950/80 backdrop-blur-sm animate-in fade-in duration-200"
+            className="fixed inset-0 z-[1000] flex items-start justify-center pt-20 px-4 bg-slate-950/40 backdrop-blur-md animate-in fade-in duration-200"
             onClick={handleBackdropClick}
         >
             <div 
                 ref={searchRef}
                 onClick={e => e.stopPropagation()}
-                className="w-full max-w-2xl glass rounded-[2rem] border border-gold-500/20 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden animate-in zoom-in-95 duration-200"
+                className="w-full max-w-2xl bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
             >
                 {/* Search Header */}
-                <div className="flex items-center p-6 border-b border-military-800">
-                    <Search className="text-gold-500 mr-4" size={24} />
+                <div className="flex items-center p-5 border-b border-slate-100 bg-slate-50/50">
+                    <Search className="text-gold-600 mr-3.5" size={22} />
                     <input 
                         autoFocus
                         type="text" 
                         placeholder="Busca clientes, trámites o documentos... (Esc para cerrar)" 
-                        className="bg-transparent border-none outline-none flex-1 text-white text-lg placeholder-military-600 font-bold"
+                        className="bg-transparent border-none outline-none flex-1 text-slate-900 text-base placeholder-slate-400 font-semibold focus:ring-0"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                     />
-                    <div className="flex items-center gap-1 bg-military-900 px-2 py-1 rounded-lg border border-military-800 text-[10px] text-military-500 font-black">
+                    <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 text-[10px] text-slate-500 font-bold shadow-2xs">
                         <Command size={10} />
                         <span>K</span>
                     </div>
                 </div>
 
                 {/* Results Area */}
-                <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-4">
+                <div className="max-h-[380px] overflow-y-auto custom-scrollbar p-3">
                     {isLoading ? (
                         <div className="p-8 text-center">
-                            <div className="w-8 h-8 border-4 border-gold-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                            <p className="text-xs text-military-500 font-bold uppercase tracking-widest">Escaneando sistema...</p>
+                            <div className="w-7 h-7 border-3 border-gold-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Buscando...</p>
                         </div>
                     ) : results.length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                            {results.map((item, idx) => (
                                <div 
                                     key={`${item.type}-${item.id}`}
                                     onClick={() => handleSelect(item)}
-                                    className={`flex items-center p-4 rounded-2xl cursor-pointer transition-all border ${activeIndex === idx ? 'bg-gold-500/10 border-gold-500/30' : 'hover:bg-military-900 border-transparent text-military-400'}`}
+                                    className={`flex items-center p-3 rounded-2xl cursor-pointer transition-all border ${activeIndex === idx ? 'bg-amber-50/80 border-amber-300 shadow-xs' : 'hover:bg-slate-50 border-transparent text-slate-600'}`}
                                     onMouseEnter={() => setActiveIndex(idx)}
                                >
-                                   <div className={`p-3 rounded-xl mr-4 ${item.type === 'CLIENTE' ? 'bg-blue-500/10 text-blue-500' : item.type === 'TRAMITE' ? 'bg-gold-500/10 text-gold-500' : 'bg-red-500/10 text-red-500'}`}>
-                                       {item.type === 'CLIENTE' && <User size={20} />}
-                                       {item.type === 'TRAMITE' && <FileText size={20} />}
-                                       {item.type === 'DOCUMENTO' && <FolderOpen size={20} />}
+                                   <div className={`p-2.5 rounded-xl mr-3.5 ${item.type === 'CLIENTE' ? 'bg-blue-50 text-blue-600 border border-blue-100' : item.type === 'TRAMITE' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                                       {item.type === 'CLIENTE' && <User size={18} />}
+                                       {item.type === 'TRAMITE' && <FileText size={18} />}
+                                       {item.type === 'DOCUMENTO' && <FolderOpen size={18} />}
                                    </div>
-                                   <div className="flex-1">
-                                       <p className="text-sm font-bold text-white uppercase tracking-tight">{item.title}</p>
-                                       <p className="text-[10px] text-military-500">{item.subtitle}</p>
+                                   <div className="flex-1 min-w-0">
+                                       <p className="text-sm font-bold text-slate-900 uppercase tracking-tight truncate">{item.title}</p>
+                                       <p className="text-xs text-slate-400 truncate">{item.subtitle}</p>
                                    </div>
-                                   <span className="text-[10px] font-black text-military-600 uppercase bg-military-950 px-2 py-1 rounded-md">
+                                   <span className="text-[10px] font-bold text-slate-600 uppercase bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200 ml-2">
                                        {item.category || item.type}
                                    </span>
                                </div>
                            ))}
                         </div>
                     ) : query.length >= 2 ? (
-                        <div className="p-12 text-center opacity-40">
-                             <Search size={48} className="mx-auto mb-4 text-military-600" />
-                             <p className="text-sm font-bold text-military-500 uppercase">Sin resultados para "{query}"</p>
+                        <div className="p-10 text-center opacity-60">
+                             <Search size={40} className="mx-auto mb-3 text-slate-300" />
+                             <p className="text-sm font-semibold text-slate-500">Sin resultados para "{query}"</p>
                         </div>
                     ) : (
-                        <div className="p-12 text-center opacity-40">
-                             <Command size={48} className="mx-auto mb-4 text-military-600" />
-                             <p className="text-sm font-bold text-military-500 uppercase tracking-widest">Inicia tu búsqueda de élite</p>
+                        <div className="p-10 text-center opacity-60">
+                             <Command size={40} className="mx-auto mb-3 text-slate-300" />
+                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Escribe al menos 2 caracteres para buscar</p>
                         </div>
                     )}
                 </div>
 
                 {/* Footer hints */}
-                <div className="p-4 bg-military-950 border-t border-military-800 flex items-center justify-between">
-                    <div className="flex gap-4">
-                        <div className="flex items-center gap-2 text-[10px] text-military-500 font-bold">
-                            <span className="bg-military-900 px-1.5 py-0.5 rounded border border-military-800 text-military-300">↑↓</span>
-                            <span>NAVEGAR</span>
+                <div className="p-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex gap-3">
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium">
+                            <span className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 font-bold shadow-2xs">↑↓</span>
+                            <span>Navegar</span>
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] text-military-500 font-bold">
-                            <span className="bg-military-900 px-1.5 py-0.5 rounded border border-military-800 text-military-300">ENTER</span>
-                            <span>SELECCIONAR</span>
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium">
+                            <span className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 font-bold shadow-2xs">Enter</span>
+                            <span>Seleccionar</span>
                         </div>
                     </div>
-                    <span className="text-[10px] text-gold-500 font-black uppercase tracking-widest">GestorArmas Search v1.0</span>
+                    <span className="text-[10px] text-gold-600 font-bold uppercase tracking-wider">Buscador Rápido</span>
                 </div>
             </div>
         </div>

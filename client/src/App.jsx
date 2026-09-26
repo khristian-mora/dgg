@@ -31,35 +31,36 @@ import { Loader2, BookOpen, Wallet, FileCheck, ShieldCheck } from 'lucide-react'
 import { LogOut, LayoutDashboard, Users, FileText, Calendar, DollarSign, Settings, Shield, FolderOpen, BarChart2, Search, Command, ListChecks, Plus, ChevronRight, Clock, Info } from 'lucide-react'
 
 // Layout component to avoid repetition
+// Layout component to avoid repetition
 export const SidebarLayout = ({ children }) => {
     const { user, logout, isSuperAdmin } = useAuth();
 
     // Si el usuario es un cliente, no mostramos barra lateral (layout limpio para el portal)
-    if (user?.rol === 'CLIENTE') return <div className="min-h-screen bg-military-950">{children}</div>;
+    if (user?.rol === 'CLIENTE') return <div className="backoffice-light min-h-screen bg-slate-50 text-slate-800">{children}</div>;
     
     return (
-        <div className="flex min-h-screen bg-military-950 text-military-100 overflow-hidden">
-            {/* Dark Sidebar */}
-            <aside className="w-64 glass border-r border-military-100/10 flex flex-col p-6 z-20">
-                <div className="flex items-center space-x-3 mb-12">
-                     <img src="/dgg_logo.png" alt="DGG Logo" className="w-10 h-10 rounded-lg object-contain shadow-lg" />
+        <div className="backoffice-light flex min-h-screen bg-slate-50 text-slate-800 overflow-hidden">
+            {/* Light Sidebar */}
+            <aside className="w-64 bg-white border-r border-slate-200 flex flex-col p-6 z-20 shadow-xs">
+                <div className="flex items-center space-x-3 mb-8">
+                     <img src="/dgg_logo.png" alt="DGG Logo" className="w-10 h-10 rounded-xl object-contain shadow-xs border border-slate-100" />
                     <div>
-                        <h2 className="text-xl font-black text-white leading-none">DGG</h2>
-                        <span className="text-[9px] text-military-500 uppercase tracking-widest font-bold">Gestión y Asesorías - AD DEFENSA PERSONAL</span>
+                        <h2 className="text-xl font-black text-slate-900 leading-none">DGG</h2>
+                        <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Gestión y Asesorías</span>
                     </div>
                 </div>
 
-                <div className="mb-8">
+                <div className="mb-6">
                     <button 
                         onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-                        className="w-full flex items-center justify-between px-4 py-3 bg-military-900 border border-military-800 rounded-2xl text-military-400 hover:text-gold-500 hover:border-gold-500/30 transition-all group"
+                        className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-500 hover:text-slate-900 hover:border-gold-500/50 hover:bg-white transition-all shadow-2xs group"
                     >
                          <div className="flex items-center gap-3">
-                            <Search size={18} />
-                            <span className="text-xs font-bold uppercase tracking-widest">Buscador Ninja</span>
+                            <Search size={18} className="text-slate-400 group-hover:text-gold-600 transition-colors" />
+                            <span className="text-xs font-bold uppercase tracking-widest">Buscador</span>
                          </div>
-                         <div className="flex items-center gap-1 bg-military-950 px-1.5 py-0.5 rounded border border-military-800 text-[8px] font-black">
-                            <Command size={8} />
+                         <div className="flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-slate-200 text-[9px] font-black text-slate-600 shadow-2xs">
+                            <Command size={9} />
                             <span>K</span>
                          </div>
                     </button>
@@ -74,7 +75,7 @@ export const SidebarLayout = ({ children }) => {
                     <NavItem icon={<Calendar size={18}/>} label="Agenda" to="/agenda" />
                     
                     <div className="pt-4 pb-2">
-                        <p className="text-[9px] font-black text-military-600 uppercase tracking-[0.2em] px-3">Recursos</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-3">Recursos</p>
                     </div>
 
                     <NavItem icon={<FolderOpen size={18}/>} label="Archivo" to="/documentos" />
@@ -83,7 +84,7 @@ export const SidebarLayout = ({ children }) => {
                     {isSuperAdmin && (
                         <>
                             <div className="pt-4 pb-2">
-                                <p className="text-[9px] font-black text-military-600 uppercase tracking-[0.2em] px-3">Administración</p>
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-3">Administración</p>
                             </div>
                             <NavItem icon={<Wallet size={18}/>} label="Caja" to="/caja" />
                             <NavItem icon={<Clock size={18}/>} label="Historial" to="/historial" />
@@ -95,35 +96,35 @@ export const SidebarLayout = ({ children }) => {
                     <NavItem icon={<Settings size={18}/>} label="Ajustes" to="/config" />
                 </nav>
 
-                <div className="mt-auto pt-6 border-t border-military-100/10">
-                    <div className="flex items-center space-x-3 mb-6 p-2 rounded-2xl bg-military-900/50">
-                        <div className="w-10 h-10 rounded-full bg-military-800 border border-gold-500/30 flex items-center justify-center text-gold-500 font-bold">
+                <div className="mt-auto pt-4 border-t border-slate-200">
+                    <div className="flex items-center space-x-3 mb-3 p-2.5 rounded-2xl bg-slate-50 border border-slate-100">
+                        <div className="w-9 h-9 rounded-full bg-slate-900 text-gold-400 border border-slate-700 flex items-center justify-center font-bold text-xs shadow-xs">
                             {user?.nombre?.charAt(0)}
                         </div>
                         <div className="overflow-hidden">
-                            <p className="text-xs font-bold text-white truncate">{user?.nombre}</p>
-                            <p className="text-[10px] text-military-500 truncate">{user?.rol}</p>
+                            <p className="text-xs font-bold text-slate-900 truncate">{user?.nombre}</p>
+                            <p className="text-[10px] text-slate-500 font-semibold truncate">{user?.rol}</p>
                         </div>
                     </div>
                     <button 
                         onClick={logout}
-                        className="flex items-center space-x-3 w-full p-3 rounded-2xl text-red-400 hover:bg-red-500/10 transition-colors font-bold text-sm"
+                        className="flex items-center space-x-3 w-full p-2.5 rounded-2xl text-rose-600 hover:bg-rose-50 transition-colors font-bold text-xs"
                     >
-                        <LogOut size={20} />
+                        <LogOut size={16} />
                         <span>Cerrar Sesión</span>
                     </button>
 
-                    <div className="mt-8 text-center border-t border-military-100/5 pt-6">
-                        <p className="text-[9px] font-black text-military-600 uppercase tracking-[0.3em]">Software de Inteligencia</p>
-                        <p className="text-[10px] font-bold text-military-400 mt-1">
-                            Desarrollado por <span className="text-gold-500/80 hover:text-gold-500 cursor-pointer transition-colors">ProNext</span>
+                    <div className="mt-3 text-center border-t border-slate-100 pt-2">
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.25em]">Software de Gestión</p>
+                        <p className="text-[9px] font-bold text-slate-500 mt-0.5">
+                            Desarrollado por <span className="text-gold-600 font-extrabold">ProNext</span>
                         </p>
                     </div>
                 </div>
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 relative overflow-y-auto custom-scrollbar pt-6">
+            <main className="flex-1 relative overflow-y-auto custom-scrollbar pt-6 bg-slate-50">
                 <div className="max-w-7xl mx-auto px-8 pb-12">
                      {children}
                 </div>
@@ -140,10 +141,10 @@ const NavItem = ({ icon, label, to }) => {
     return (
         <Link 
             to={to} 
-            className={`flex items-center space-x-4 p-3 rounded-2xl transition-all duration-300 group ${active ? 'bg-gold-gradient text-military-950 shadow-lg' : 'hover:bg-military-800 text-military-400 hover:text-military-100'}`}
+            className={`flex items-center space-x-3.5 px-3.5 py-2.5 rounded-2xl transition-all duration-200 group ${active ? 'bg-gold-gradient text-slate-950 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100 font-medium'}`}
         >
-            <span className={`${active ? '' : 'group-hover:scale-110'} transition-transform`}>{icon}</span>
-            <span className="font-bold text-sm">{label}</span>
+            <span className={`${active ? 'text-slate-950' : 'text-slate-500 group-hover:text-slate-900 group-hover:scale-105'} transition-transform`}>{icon}</span>
+            <span className="text-xs font-semibold">{label}</span>
         </Link>
     );
 };
@@ -210,12 +211,12 @@ const Dashboard = () => {
 
     return (
         <SidebarLayout>
-            <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <p className="text-gold-500 text-xs font-bold uppercase tracking-[0.3em] mb-2">Bienvenido {user?.nombre}</p>
-                <h1 className="text-4xl font-black text-white tracking-tight">Centro de Operaciones</h1>
+            <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <p className="text-gold-600 text-xs font-bold uppercase tracking-[0.25em] mb-1">Bienvenido {user?.nombre}</p>
+                <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Centro de Operaciones</h1>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                 <StatsCard label="Trámites Activos" value={stats?.tramitesActivos || "0"} trend="+12%" color="gold" />
                 <StatsCard label="Urgentes" value={stats?.urgentes || "0"} trend="DCCAE" color="red" />
                 <StatsCard label="Citas Hoy" value={citasHoy.length.toString()} trend={citasHoy[0]?.hora || "--"} color="blue" />
@@ -225,12 +226,12 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                {/* Centro - Trámites */}
                <div className="lg:col-span-2 space-y-8">
-                    <div className="glass p-8 rounded-[2.5rem]">
-                        <h3 className="text-xl font-bold mb-6 text-white flex items-center gap-2">
-                            <FileText size={20} className="text-gold-500" /> Trámites Recientes
+                    <div className="glass p-8 rounded-3xl">
+                        <h3 className="text-xl font-bold mb-6 text-slate-900 flex items-center gap-2">
+                            <FileText size={20} className="text-gold-600" /> Trámites Recientes
                         </h3>
                         {tramitesRecientes.length === 0 ? (
-                            <p className="text-center text-xs text-military-600 font-bold uppercase py-10">Sin actividad reciente</p>
+                            <p className="text-center text-xs text-slate-400 font-bold uppercase py-10">Sin actividad reciente</p>
                         ) : (
                             <div className="space-y-4">
                                 {tramitesRecientes.map(t => (
@@ -245,32 +246,32 @@ const Dashboard = () => {
                         )}
                     </div>
 
-                    <div className="glass p-8 rounded-[2.5rem]">
+                    <div className="glass p-8 rounded-3xl">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                <ListChecks size={20} className="text-gold-500" /> Tareas y Recordatorios Activos
+                            <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                <ListChecks size={20} className="text-gold-600" /> Tareas y Recordatorios Activos
                             </h3>
-                            <Link to="/tareas" className="text-[10px] font-black text-military-500 hover:text-white uppercase tracking-widest">VER TODAS</Link>
+                            <Link to="/tareas" className="text-[10px] font-black text-slate-500 hover:text-slate-900 uppercase tracking-widest">VER TODAS</Link>
                         </div>
                         <div className="space-y-4">
                             {tareasPendientes.length === 0 ? (
-                                <p className="text-military-500 text-sm text-center py-4 italic">No hay tareas pendientes en el radar</p>
+                                <p className="text-slate-400 text-sm text-center py-4 italic">No hay tareas pendientes en el radar</p>
                             ) : (
                                 tareasPendientes.map(task => (
-                                    <div key={task.id} className="flex items-center justify-between p-4 rounded-2xl bg-military-900/40 border border-military-800/50 hover:border-gold-500/30 transition-all border-l-4 border-l-gold-500">
+                                    <div key={task.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-gold-500/40 transition-all border-l-4 border-l-gold-500 shadow-2xs">
                                         <div className="flex items-start gap-4">
-                                            <div className={`p-3 rounded-xl bg-gold-500/10 text-gold-500`}>
+                                            <div className="p-3 rounded-xl bg-amber-50 text-gold-600 border border-amber-200/60">
                                                 <Clock size={18} />
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-black uppercase text-military-500 tracking-widest">Límite: {new Date(task.fechaLimite).toLocaleDateString()}</p>
-                                                <p className="text-sm font-bold text-white mt-1 leading-relaxed">{task.titulo}</p>
-                                                <p className="text-[10px] text-military-400 mt-1">{task.descripcion}</p>
+                                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Límite: {new Date(task.fechaLimite).toLocaleDateString()}</p>
+                                                <p className="text-sm font-bold text-slate-900 mt-1 leading-relaxed">{task.titulo}</p>
+                                                <p className="text-xs text-slate-500 mt-1">{task.descripcion}</p>
                                             </div>
                                         </div>
                                         <Link 
                                             to={task.tramiteId ? `/tramites/${task.tramiteId}` : '/tareas'}
-                                            className="px-4 py-2 bg-military-800 text-military-100 rounded-xl text-[10px] font-black uppercase hover:bg-gold-500 hover:text-military-950 transition-all"
+                                            className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase hover:bg-gold-500 hover:text-slate-950 transition-all shadow-xs"
                                         >
                                             GESTIONAR
                                         </Link>
@@ -283,62 +284,61 @@ const Dashboard = () => {
 
                {/* Derecha - Agenda */}
                <div className="space-y-8">
-                    {/* Bot WhatsApp Status Card */}
                     {/* Resumen de Historial Card */}
-                    <div className="glass p-6 rounded-[2.5rem] border border-military-100/10 mb-6 bg-military-900/20">
+                    <div className="glass p-6 rounded-3xl border border-slate-200 mb-6 bg-white shadow-xs">
                         <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-                                <Info size={14} className="text-gold-500" /> Registro de Actividad
+                            <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                                <Info size={14} className="text-gold-600" /> Registro de Actividad
                             </h4>
                         </div>
                         <div className="space-y-4">
                             {notificaciones.slice(0, 3).map(n => (
-                                <div key={n.id} className="border-l-2 border-military-800 pl-4 py-1">
-                                    <p className="text-[10px] font-bold text-white uppercase truncate">{n.asunto}</p>
-                                    <p className="text-[9px] text-military-500 mt-0.5">{new Date(n.fechaEnvio).toLocaleDateString()}</p>
+                                <div key={n.id} className="border-l-2 border-slate-200 pl-4 py-1">
+                                    <p className="text-[11px] font-bold text-slate-800 uppercase truncate">{n.asunto}</p>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">{new Date(n.fechaEnvio).toLocaleDateString()}</p>
                                 </div>
                             ))}
-                            <Link to="/historial" className="text-[10px] font-black text-gold-500 hover:underline uppercase block mt-4">IR AL HISTORIAL COMPLETO</Link>
+                            <Link to="/historial" className="text-[10px] font-black text-gold-600 hover:underline uppercase block mt-4">IR AL HISTORIAL COMPLETO</Link>
                         </div>
                     </div>
 
-                    <div className="glass p-8 rounded-[2.5rem]">
-                        <h3 className="text-xl font-bold mb-6 text-white flex items-center gap-2">
-                            <Calendar size={20} className="text-gold-500" /> Agenda Hoy
+                    <div className="glass p-8 rounded-3xl">
+                        <h3 className="text-xl font-bold mb-6 text-slate-900 flex items-center gap-2">
+                            <Calendar size={20} className="text-gold-600" /> Agenda Hoy
                         </h3>
                         {citasHoy.length === 0 ? (
                             <div className="flex flex-col items-center py-6">
-                                <Search size={32} className="text-military-700 mb-3" />
-                                <p className="text-military-600 text-xs font-bold uppercase tracking-widest">Sin citas programadas</p>
+                                <Search size={32} className="text-slate-300 mb-3" />
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Sin citas programadas</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
                                 {citasHoy.map((cita) => (
-                                    <div key={cita.id} className="group flex items-center gap-3 p-3 bg-military-900/40 rounded-xl hover:bg-military-800 transition-colors cursor-pointer border border-transparent hover:border-military-700">
-                                        <div className="text-center min-w-[50px] border-r border-military-800 pr-3">
-                                            <p className="text-xs font-black text-gold-500">{cita.hora}</p>
+                                    <div key={cita.id} className="group flex items-center gap-3 p-3.5 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200">
+                                        <div className="text-center min-w-[50px] border-r border-slate-200 pr-3">
+                                            <p className="text-xs font-black text-gold-600">{cita.hora}</p>
                                         </div>
                                         <div className="flex-1 overflow-hidden">
-                                            <h4 className="font-bold text-white text-sm">{cita.cliente ? `${cita.cliente.nombres} ${cita.cliente.apellidos}` : 'Cliente'}</h4>
-                                            <p className="text-[10px] text-military-500 uppercase font-bold tracking-wider">{cita.motivo}</p>
+                                            <h4 className="font-bold text-slate-900 text-sm">{cita.cliente ? `${cita.cliente.nombres} ${cita.cliente.apellidos}` : 'Cliente'}</h4>
+                                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{cita.motivo}</p>
                                         </div>
-                                        <ChevronRight size={14} className="text-military-700 group-hover:text-gold-500 transition-colors" />
+                                        <ChevronRight size={14} className="text-slate-400 group-hover:text-gold-600 transition-colors" />
                                     </div>
                                 ))}
                             </div>
                         )}
                         <Link 
                             to="/agenda"
-                            className="w-full mt-6 py-3 border border-military-800 rounded-2xl text-[10px] font-black text-military-400 uppercase tracking-[0.2em] hover:bg-military-900 hover:text-white transition-all text-center block"
+                            className="w-full mt-6 py-3 border border-slate-200 rounded-2xl text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] hover:bg-slate-100 hover:text-slate-900 transition-all text-center block shadow-2xs"
                         >
                             VER CALENDARIO COMPLETO
                         </Link>
                     </div>
 
-                    <div className="glass p-8 rounded-[2.5rem] bg-gold-gradient/5 border-gold-500/20 text-center">
-                        <ShieldCheck className="mx-auto text-gold-500 mb-4" size={32} />
-                        <h4 className="text-sm font-black text-white uppercase tracking-widest mb-2">Backups Seguros</h4>
-                        <p className="text-[10px] text-military-500 font-bold uppercase tracking-tight">
+                    <div className="glass p-8 rounded-3xl bg-amber-50/50 border border-amber-200/60 text-center shadow-xs">
+                        <ShieldCheck className="mx-auto text-gold-600 mb-3" size={32} />
+                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-1.5">Backups Seguros</h4>
+                        <p className="text-[11px] text-slate-500 font-medium tracking-tight">
                             {lastBackup ? `Última copia exitosa: ${new Date(lastBackup).toLocaleString()}` : 'Configurando sistema de backups...'}
                         </p>
                     </div>
@@ -351,29 +351,29 @@ const Dashboard = () => {
 
 const StatsCard = ({ label, value, trend, color }) => {
     const colorMap = {
-        gold: 'border-gold-500',
-        red: 'border-red-500',
-        blue: 'border-blue-500',
-        green: 'border-green-500'
+        gold: 'border-gold-500 bg-amber-50/30',
+        red: 'border-rose-500 bg-rose-50/30',
+        blue: 'border-blue-500 bg-blue-50/30',
+        green: 'border-emerald-500 bg-emerald-50/30'
     };
     return (
-        <div className={`glass p-6 rounded-[2rem] border-b-4 ${colorMap[color]} hover:translate-y-[-4px] transition-all duration-300`}>
-            <p className="text-military-400 text-[10px] font-black uppercase tracking-widest mb-1">{label}</p>
+        <div className={`glass p-6 rounded-3xl border-b-4 ${colorMap[color]} shadow-xs hover:shadow-md hover:translate-y-[-2px] transition-all duration-300`}>
+            <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">{label}</p>
             <div className="flex items-end justify-between">
-                <p className="text-3xl font-black text-white">{value}</p>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-lg bg-military-800 text-military-300`}>{trend}</span>
+                <p className="text-3xl font-black text-slate-900">{value}</p>
+                <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">{trend}</span>
             </div>
         </div>
     );
 };
 
 const RecentItem = ({ name, type, status }) => (
-    <div className="flex items-center justify-between p-4 rounded-2xl bg-military-900/40 border border-military-800/50 hover:border-military-600 transition-all cursor-pointer">
+    <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-white transition-all cursor-pointer shadow-2xs">
         <div>
-            <p className="font-bold text-sm text-white">{name}</p>
-            <p className="text-xs text-military-500">{type}</p>
+            <p className="font-bold text-sm text-slate-900">{name}</p>
+            <p className="text-xs text-slate-500">{type}</p>
         </div>
-        <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${status === 'Completado' ? 'bg-green-500/10 text-green-400' : 'bg-gold-500/10 text-gold-400'}`}>
+        <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${status === 'Completado' || status === 'Finalizado' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
             {status}
         </span>
     </div>

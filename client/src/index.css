@@ -11,8 +11,6 @@
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
   font-family: 'Inter', sans-serif;
@@ -59,5 +57,208 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
+
+/* ==========================================================================
+   BACKOFFICE LIGHT THEME SYSTEM (Post-Login)
+   ========================================================================== */
+
+.backoffice-light {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+}
+
+.backoffice-light aside {
+  background-color: #ffffff !important;
+  border-right-color: #e2e8f0 !important;
+  box-shadow: 1px 0 10px rgba(0, 0, 0, 0.03);
+}
+
+.backoffice-light main {
+  background-color: #f8fafc !important;
+}
+
+/* Cards & Containers */
+.backoffice-light .glass {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.05) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  color: #1e293b !important;
+}
+
+.backoffice-light .bg-military-950,
+.backoffice-light .bg-military-900,
+.backoffice-light .bg-military-800 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+.backoffice-light .bg-military-900\/40,
+.backoffice-light .bg-military-900\/50,
+.backoffice-light .bg-military-900\/60,
+.backoffice-light .bg-military-900\/30,
+.backoffice-light .bg-military-900\/20,
+.backoffice-light .bg-military-800\/50,
+.backoffice-light .bg-military-800\/40,
+.backoffice-light .bg-military-800\/30,
+.backoffice-light .bg-military-800\/20,
+.backoffice-light .bg-military-950\/50,
+.backoffice-light .bg-military-950\/80,
+.backoffice-light .bg-military-950\/90 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.backoffice-light .bg-military-700,
+.backoffice-light .bg-military-700\/50 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+/* Headings and text */
+.backoffice-light h1,
+.backoffice-light h2,
+.backoffice-light h3,
+.backoffice-light h4,
+.backoffice-light h5,
+.backoffice-light h6 {
+  color: #0f172a !important;
+}
+
+.backoffice-light .text-white {
+  color: #0f172a !important;
+}
+
+.backoffice-light .text-military-100,
+.backoffice-light .text-military-200 {
+  color: #1e293b !important;
+}
+
+.backoffice-light .text-military-300 {
+  color: #334155 !important;
+}
+
+.backoffice-light .text-military-400 {
+  color: #475569 !important;
+}
+
+.backoffice-light .text-military-500,
+.backoffice-light .text-military-600 {
+  color: #64748b !important;
+}
+
+.backoffice-light .text-military-700,
+.backoffice-light .text-military-800 {
+  color: #94a3b8 !important;
+}
+
+/* Gold text on light theme */
+.backoffice-light .text-gold-500 {
+  color: #b45309 !important;
+}
+
+.backoffice-light .text-gold-400 {
+  color: #d97706 !important;
+}
+
+/* Borders */
+.backoffice-light .border-military-950,
+.backoffice-light .border-military-900,
+.backoffice-light .border-military-800,
+.backoffice-light .border-military-700,
+.backoffice-light .border-military-600,
+.backoffice-light .border-military-100\/10,
+.backoffice-light .border-military-100\/20,
+.backoffice-light .border-military-800\/50,
+.backoffice-light .border-military-100\/5 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Inputs & Form Controls */
+.backoffice-light input,
+.backoffice-light select,
+.backoffice-light textarea {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  border-radius: 0.75rem;
+}
+
+.backoffice-light input::placeholder,
+.backoffice-light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.backoffice-light input:focus,
+.backoffice-light select:focus,
+.backoffice-light textarea:focus {
+  border-color: #d97706 !important;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15) !important;
+  outline: none !important;
+}
+
+/* Table Styles */
+.backoffice-light table {
+  color: #1e293b !important;
+}
+
+.backoffice-light table thead tr,
+.backoffice-light table th {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.backoffice-light table tbody tr {
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.backoffice-light table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+.backoffice-light table td {
+  color: #1e293b !important;
+}
+
+/* Modals & Backdrop */
+.backoffice-light .fixed.inset-0.bg-military-950\/80,
+.backoffice-light .fixed.inset-0.bg-military-950\/90,
+.backoffice-light .fixed.inset-0.bg-black\/80,
+.backoffice-light .fixed.inset-0.bg-black\/60,
+.backoffice-light .fixed.inset-0.bg-military-950\/70 {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.backoffice-light .fixed.inset-0 .glass,
+.backoffice-light .fixed.inset-0 .bg-military-900,
+.backoffice-light .fixed.inset-0 .bg-military-950 {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+  color: #0f172a !important;
+}
+
+/* Scrollbars in Light Backoffice */
+.backoffice-light ::-webkit-scrollbar-track,
+.backoffice-light .custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+}
+
+.backoffice-light ::-webkit-scrollbar-thumb,
+.backoffice-light .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+  border-radius: 9999px !important;
+}
+
+.backoffice-light ::-webkit-scrollbar-thumb:hover,
+.backoffice-light .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
