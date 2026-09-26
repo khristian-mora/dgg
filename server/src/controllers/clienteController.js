@@ -138,6 +138,22 @@ const updateCliente = async (req, res) => {
             updateData.correoDCCAE = encrypt(updateData.correoDCCAE);
         }
 
+        const parseSafeDate = (d) => {
+            if (!d) return null;
+            const parsed = new Date(d);
+            if (isNaN(parsed.getTime())) return null;
+            const year = parsed.getUTCFullYear();
+            if (year < 1900 || year > 2100) return null;
+            return parsed;
+        };
+
+        if ('fechaExpedicionCC' in updateData) {
+            updateData.fechaExpedicionCC = parseSafeDate(updateData.fechaExpedicionCC);
+        }
+        if ('fechaNacimiento' in updateData) {
+            updateData.fechaNacimiento = parseSafeDate(updateData.fechaNacimiento);
+        }
+
         const cliente = await prisma.cliente.update({
             where: { id },
             data: updateData

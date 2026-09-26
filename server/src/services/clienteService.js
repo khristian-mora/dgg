@@ -3,6 +3,15 @@ const bcrypt = require('bcrypt');
 const { encrypt } = require('../utils/encryption');
 const { sendEmail } = require('./emailService');
 
+const parseSafeDate = (d) => {
+  if (!d) return null;
+  const parsed = new Date(d);
+  if (isNaN(parsed.getTime())) return null;
+  const year = parsed.getUTCFullYear();
+  if (year < 1900 || year > 2100) return null;
+  return parsed;
+};
+
 /**
  * Crea un cliente con toda la lógica de automatización vinculada:
  * - Cifrado de campos sensibles DCCAE/Indumil.
@@ -31,7 +40,7 @@ const createCliente = async (clienteData) => {
       nombres,
       apellidos,
       cedula,
-      fechaExpedicionCC: fechaExpedicionCC ? new Date(fechaExpedicionCC) : null,
+      fechaExpedicionCC: parseSafeDate(fechaExpedicionCC),
       lugarExpedicionCC,
       nacionalidad: nacionalidad || 'COLOMBIANA',
       telefono,
@@ -45,7 +54,7 @@ const createCliente = async (clienteData) => {
       ciudad,
       departamento,
       ocupacion,
-      fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : null,
+      fechaNacimiento: parseSafeDate(fechaNacimiento),
       contrasenaDCCAE,
       correoDCCAE,
       tipoCliente: tipoCliente || 'CLIENTE',
